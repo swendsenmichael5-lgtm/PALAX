@@ -279,16 +279,22 @@ function buildShop() {
   holo.addEventListener('click', ripCurrent);
   stage.appendChild(holo);
 
-  const oddsLine = RARITY_ORDER.map(r =>
-    `<span style="color:${RARITIES[r].color}">${RARITIES[r].label} ${pack.odds[r]}%</span>`).join(' · ');
+  const oddChips = RARITY_ORDER.map(r =>
+    `<span class="odd"><i style="background:${RARITIES[r].color}"></i>${RARITIES[r].label}<b style="color:${RARITIES[r].color}">${pack.odds[r]}%</b></span>`).join('');
   $('packInfo').innerHTML =
     `<div class="p-name">${pack.name}</div>` +
-    `<div class="p-meta">1 MYSTERY CARD INSIDE</div>` +
-    `<div class="p-odds">${oddsLine}</div>`;
+    `<div class="p-meta">ONE MYSTERY CARD INSIDE</div>` +
+    `<div class="odds-plaque">${oddChips}</div>`;
 
+  const pips = Array.from({ length: PITY_RARE }, (_, i) =>
+    `<span class="pip${i < state.sinceRare ? ' on' : ''}"></span>`).join('');
+  const legendPct = Math.min(100, state.sinceLegendary / PITY_LEGENDARY * 100);
   $('pityHint').innerHTML =
-    `PITY: RARE+ GUARANTEED EVERY ${PITY_RARE} PACKS &middot; LEGENDARY EVERY ${PITY_LEGENDARY}<br>` +
-    `PACKS OPENED: ${state.opened}`;
+    `<div class="pity-board">` +
+    `<div class="pity-row"><label>RARE CHARM</label><div class="pips">${pips}</div></div>` +
+    `<div class="pity-row"><label>LEGEND CHARM</label><div class="charm-bar"><div class="charm-fill" style="width:${legendPct}%"></div></div></div>` +
+    `<div class="opened-line">PACKS RIPPED &middot; ${state.opened}</div>` +
+    `</div>`;
 }
 
 function ripCurrent() {
@@ -755,6 +761,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     btn.classList.add('active');
     $('screen-' + btn.dataset.screen).classList.add('active');
+    drawNavIcons();
     AudioEngine.sfx.flip();
     if (btn.dataset.screen === 'collection') renderCollection();
     if (btn.dataset.screen === 'trade') renderTrade();
@@ -781,3 +788,86 @@ buildShop();
 renderCollection();
 renderTrade();
 resetDuelTable();
+
+/* ============================================================
+   Hand-drawn pixel nav icons ('#' main, 'o' accent per map)
+   ============================================================ */
+const NAV_ICONS = {
+  shop: [
+    '.o.o.o.o.o.',
+    '.#########.',
+    '.#########.',
+    '.##..#..##.',
+    '.#..###..#.',
+    '.##..#..##.',
+    '.#########.',
+    '.#..ooo..#.',
+    '.#########.',
+    '.o.o.o.o.o.',
+  ],
+  game: [
+    '...........',
+    '.#########.',
+    '.#o.....o#.',
+    '.#.......#.',
+    '.#...o...#.',
+    '.#.......#.',
+    '.#o.....o#.',
+    '.#########.',
+    '...........',
+    '...........',
+  ],
+  collection: [
+    '..#######..',
+    '..#.....#..',
+    '..#..o..#..',
+    '..#.ooo.#..',
+    '..#..o..#..',
+    '..#.....#..',
+    '..#.....#..',
+    '..#######..',
+    '...........',
+    '...........',
+  ],
+  trade: [
+    '...........',
+    '...#.......',
+    '..#########',
+    '...#.......',
+    '...........',
+    '.......#...',
+    '#########..',
+    '.......#...',
+    '...........',
+    '...........',
+  ],
+};
+
+function drawNavIcons() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    if (!btn.querySelector) return;
+    const slot = btn.querySelector('.nav-ico');
+    if (!slot) return;
+    const active = btn.classList.contains('active');
+    let cv = slot.querySelector('canvas');
+    if (!cv) {
+      cv = document.createElement('canvas');
+      slot.textContent = '';
+      slot.appendChild(cv);
+    }
+    const map = NAV_ICONS[btn.dataset.screen];
+    cv.width = 11; cv.height = 10;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, 11, 10);
+    map.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        if (row[x] === '.') continue;
+        ctx.fillStyle = row[x] === '#'
+          ? (active ? '#2a2008' : '#9aa3b5')
+          : (active ? '#7a5a14' : '#e8b54d');
+        ctx.fillRect(x, y, 1, 1);
+      }
+    });
+  });
+}
+drawNavIcons();
