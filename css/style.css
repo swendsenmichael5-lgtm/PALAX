@@ -278,7 +278,7 @@ body.flashwhite #flash { opacity: 0.75; }
   position: absolute;
   bottom: -14px; left: 50%;
   translate: -50%;
-  width: 170px; height: 16px;
+  width: 150px; height: 16px;
   background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.55), transparent 70%);
 }
 .pack-stage::after {
@@ -286,7 +286,7 @@ body.flashwhite #flash { opacity: 0.75; }
   position: absolute;
   bottom: -18px; left: 50%;
   translate: -50%;
-  width: 158px; height: 13px;
+  width: 138px; height: 13px;
   background: linear-gradient(180deg, #232c3a, #141a24);
   clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%);
   box-shadow: inset 0 2px 0 rgba(232,181,77,0.35), inset 0 -3px 0 rgba(0,0,0,0.5);
@@ -406,7 +406,7 @@ body.flashwhite #flash { opacity: 0.75; }
 
 .pack-wrap {
   position: relative;
-  width: 240px; height: 320px;
+  width: 220px; height: 356px;
   touch-action: none;
   cursor: grab;
   z-index: 3;
@@ -419,11 +419,11 @@ body.flashwhite #flash { opacity: 0.75; }
 #packBody, #packFlap {
   position: absolute;
   left: 0; top: 0;
-  width: 240px;
+  width: 220px;
   image-rendering: pixelated;
 }
-#packBody { height: 320px; z-index: 2; transition: filter 0.13s ease-out; }
-#packFlap { height: 90px; z-index: 3; transition: transform 0.09s ease-out; }
+#packBody { height: 356px; z-index: 2; transition: filter 0.13s ease-out; }
+#packFlap { height: 85px; z-index: 3; transition: transform 0.09s ease-out; }
 #packFlap.flying {
   transition: transform 0.7s cubic-bezier(0.25, 0.5, 0.3, 1) !important, opacity 0.7s !important;
   opacity: 0;
@@ -897,8 +897,8 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   gap: 22px;
   width: 100%;
 }
-.pack-stage { width: 188px; height: 254px; margin-top: 4px; }
-.pack-holo { width: 172px; height: 229px; }
+.pack-stage { width: 176px; height: 286px; margin-top: 4px; }
+.pack-holo { width: 158px; height: 255px; }
 .side-col {
   display: flex;
   flex-direction: column;
@@ -1028,7 +1028,7 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
 .pop-wrap.in-pack {
   position: absolute;
   left: 50%;
-  top: 24px;
+  top: 44px;
   margin-left: -96px;
   width: 192px; height: 270px;
   z-index: 1;

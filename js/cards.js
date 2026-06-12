@@ -278,7 +278,7 @@ function buildCardEl(card, { faceUp = false } = {}) {
    (top, torn off) and body so the rip can separate them.
    ============================================================ */
 
-const PACK_W = 48, PACK_H = 64, TEAR_Y = 12;
+const PACK_W = 52, PACK_H = 84, TEAR_Y = 15;
 
 /* jagged tear line, one y-offset per column */
 function makeTearLine(seedRnd) {
@@ -288,9 +288,9 @@ function makeTearLine(seedRnd) {
   return line;
 }
 
-/* Full wrapper art on an offscreen canvas.
-   Premium pouch: deep navy foil, gold pinstripe trim, crest
-   medallion with a crescent moon, ivory label plate. */
+/* Full wrapper art on an offscreen canvas (52x84 — true booster
+   proportions). Printed header you literally tear off, perforation
+   guide, radiant crest art panel, ivory contents plate. */
 function drawPackArt(pack) {
   const c = document.createElement('canvas');
   c.width = PACK_W; c.height = PACK_H;
@@ -299,7 +299,7 @@ function drawPackArt(pack) {
 
   // navy foil body with soft vertical shading
   for (let x = 0; x < PACK_W; x++) {
-    ctx.fillStyle = x < 8 ? '#27303f' : (x < 34 ? '#1f2734' : '#181f2a');
+    ctx.fillStyle = x < 9 ? '#27303f' : (x < 36 ? '#1f2734' : '#181f2a');
     ctx.fillRect(x, 0, 1, PACK_H);
   }
   // faint diagonal weave
@@ -307,7 +307,7 @@ function drawPackArt(pack) {
   for (let y = 0; y < PACK_H; y++)
     for (let x = (y % 4); x < PACK_W; x += 4) ctx.fillRect(x, y, 1, 1);
 
-  // crimp zigzag top + bottom
+  // crimped foil ends
   for (let x = 0; x < PACK_W; x += 2) {
     ctx.fillStyle = '#101620'; ctx.fillRect(x, 0, 1, 4);
     ctx.fillStyle = '#2c3644'; ctx.fillRect(x + 1, 0, 1, 4);
@@ -315,23 +315,52 @@ function drawPackArt(pack) {
     ctx.fillStyle = '#101620'; ctx.fillRect(x + 1, PACK_H - 4, 1, 4);
   }
   ctx.fillStyle = c1;
-  ctx.fillRect(0, 4, PACK_W, 1);
-  ctx.fillRect(0, PACK_H - 5, PACK_W, 1);
+  ctx.fillRect(0, 5, PACK_W, 1);
+  ctx.fillRect(0, PACK_H - 6, PACK_W, 1);
 
-  // double gold pinstripe frame
-  ctx.fillStyle = c1;
-  ctx.fillRect(2, 7, PACK_W - 4, 1);
-  ctx.fillRect(2, PACK_H - 8, PACK_W - 4, 1);
-  ctx.fillRect(2, 7, 1, PACK_H - 15);
-  ctx.fillRect(PACK_W - 3, 7, 1, PACK_H - 15);
+  // printed header — the wordmark rides on the flap you tear off
+  ctx.fillStyle = '#0a0d12';
+  ctx.fillRect(3, 7, PACK_W - 6, 7);
+  drawText(ctx, 'PALAX', Math.floor((PACK_W - textW('PALAX')) / 2), 8, c1);
+  ctx.fillStyle = c2;   // flanking diamonds
+  [[6, 9], [PACK_W - 9, 9]].forEach(([x, y]) => {
+    ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y + 1, 3, 1); ctx.fillRect(x + 1, y + 2, 1, 1);
+  });
+
+  // perforation guide along the tear line
+  ctx.fillStyle = 'rgba(241,233,214,0.55)';
+  for (let x = 2; x < PACK_W - 2; x += 3) ctx.fillRect(x, TEAR_Y, 1, 1);
+
+  // ---- main art panel: radiant crest in the night ----
+  ctx.fillStyle = '#0d1119';
+  ctx.fillRect(3, 18, PACK_W - 6, 44);
+  // seeded-looking fixed stars
+  ctx.fillStyle = '#f1e9d6';
+  [[8, 22], [40, 25], [14, 56], [44, 52], [25, 20], [36, 58], [10, 40], [45, 36]]
+    .forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+  // diagonal sash behind the crest
+  ctx.fillStyle = c3;
+  for (let x = 3; x < PACK_W - 3; x++) {
+    const y = 58 - Math.floor(x * 0.75);
+    if (y >= 18 && y < 62) { ctx.fillRect(x, y, 1, 5); }
+  }
   ctx.fillStyle = c2;
-  ctx.fillRect(4, 9, PACK_W - 8, 1);
-  ctx.fillRect(4, PACK_H - 10, PACK_W - 8, 1);
-  ctx.fillRect(4, 9, 1, PACK_H - 19);
-  ctx.fillRect(PACK_W - 5, 9, 1, PACK_H - 19);
-
-  // crest medallion: gold ring with crescent moon
-  const cx = 24, cy = 25, R = 11;
+  for (let x = 3; x < PACK_W - 3; x++) {
+    const y = 58 - Math.floor(x * 0.75);
+    if (y >= 18 && y < 62) ctx.fillRect(x, y, 1, 1);
+  }
+  // radiant spokes
+  const cx = 26, cy = 39;
+  ctx.fillStyle = c2;
+  ctx.globalAlpha = 0.55;
+  [[0, -17], [12, -12], [17, 0], [12, 12], [0, 17], [-12, 12], [-17, 0], [-12, -12]]
+    .forEach(([dx, dy]) => {
+      ctx.fillRect(cx + Math.round(dx * 0.85), cy + Math.round(dy * 0.85), 1, 1);
+      ctx.fillRect(cx + dx, cy + dy, 1, 1);
+    });
+  ctx.globalAlpha = 1;
+  // crest ring
+  const R = 13;
   for (let dy = -R; dy <= R; dy++) {
     const half = Math.floor(Math.sqrt(R * R - dy * dy));
     ctx.fillStyle = c2;
@@ -342,43 +371,45 @@ function drawPackArt(pack) {
     ctx.fillStyle = '#141a24';
     ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
   }
-  ctx.fillStyle = c0;   // ring highlight
-  ctx.fillRect(cx - 4, cy - R, 8, 1);
-  // crescent inside
-  for (let dy = -5; dy <= 5; dy++) {
-    const half = Math.floor(Math.sqrt(25 - dy * dy));
+  ctx.fillStyle = c0;
+  ctx.fillRect(cx - 4, cy - R, 8, 1);   // ring highlight
+  // crescent + star
+  for (let dy = -7; dy <= 7; dy++) {
+    const half = Math.floor(Math.sqrt(49 - dy * dy));
     ctx.fillStyle = c1;
     ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
   }
-  for (let dy = -5; dy <= 5; dy++) {
-    const half = Math.floor(Math.sqrt(25 - dy * dy));
+  for (let dy = -7; dy <= 7; dy++) {
+    const half = Math.floor(Math.sqrt(49 - dy * dy));
     ctx.fillStyle = '#141a24';
-    ctx.fillRect(cx + 2 - half, cy + dy, half * 2 || 1, 1);
+    ctx.fillRect(cx + 3 - half, cy + dy, half * 2 || 1, 1);
   }
-  // tiny star by the moon
   ctx.fillStyle = c0;
-  ctx.fillRect(cx + 3, cy - 2, 1, 3);
-  ctx.fillRect(cx + 2, cy - 1, 3, 1);
+  ctx.fillRect(cx + 4, cy - 3, 1, 5);
+  ctx.fillRect(cx + 2, cy - 1, 5, 1);
+  // art panel corner brackets
+  ctx.fillStyle = c2;
+  ctx.fillRect(3, 18, 5, 1); ctx.fillRect(3, 18, 1, 5);
+  ctx.fillRect(PACK_W - 8, 18, 5, 1); ctx.fillRect(PACK_W - 4, 18, 1, 5);
+  ctx.fillRect(3, 61, 5, 1); ctx.fillRect(3, 57, 1, 5);
+  ctx.fillRect(PACK_W - 8, 61, 5, 1); ctx.fillRect(PACK_W - 4, 57, 1, 5);
 
   // gold chevron divider
-  for (let x = 6; x < PACK_W - 6; x++) {
-    const y = 42 + Math.floor(2 * Math.abs(((x - 6) / 6) % 2 - 1));
+  for (let x = 5; x < PACK_W - 5; x++) {
+    const y = 64 + Math.floor(2 * Math.abs(((x - 5) / 5) % 2 - 1));
     ctx.fillStyle = c1; ctx.fillRect(x, y, 1, 1);
   }
 
-  // ivory label plate with glyph marks
+  // ivory contents plate: printed "1 CARD"
   ctx.fillStyle = '#e9dfc8';
-  ctx.fillRect(8, 48, PACK_W - 16, 11);
+  ctx.fillRect(7, 68, PACK_W - 14, 9);
   ctx.fillStyle = '#b3a786';
-  ctx.fillRect(8, 58, PACK_W - 16, 1);
-  ctx.fillStyle = '#2a2415';
-  for (let i = 0; i < 5; i++) ctx.fillRect(12 + i * 5, 51, 3, 5);
-  ctx.fillStyle = '#e9dfc8';
-  for (let i = 0; i < 5; i++) ctx.fillRect(13 + i * 5, 53, 1, 1);
+  ctx.fillRect(7, 76, PACK_W - 14, 1);
+  drawText(ctx, '1 CARD', Math.floor((PACK_W - textW('1 CARD')) / 2), 70, '#2a2415');
 
   // sparkle glints
   ctx.fillStyle = '#fffaf0';
-  [[9, 13], [38, 18], [13, 38], [40, 62]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+  [[10, 30], [42, 24], [13, 52], [44, 64], [27, 26]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
 
   return c;
 }
