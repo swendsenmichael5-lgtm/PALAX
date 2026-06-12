@@ -204,7 +204,7 @@ const fx = (() => {
 /* 3D tilt that follows the pointer; holo foils shift with the tilt
    like catching the light on a real card */
 function addTilt(el, max = 14) {
-  const holos = () => (el.querySelectorAll ? [...el.querySelectorAll('.holo')] : []);
+  const foil = () => (el.querySelector ? el.querySelector('.foil-canvas') : null);
   el.addEventListener('pointermove', e => {
     const r = el.getBoundingClientRect();
     const dx = (e.clientX - r.left) / r.width - 0.5;
@@ -212,20 +212,14 @@ function addTilt(el, max = 14) {
     el.style.animation = 'none';
     el.style.transform =
       `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.08)`;
-    for (const h of holos()) {
-      h.style.animation = 'none';
-      h.style.backgroundPosition = `${50 + dx * 90}% ${50 + dy * 90}%`;
-      h.style.setProperty('--hx', `${50 + dx * 90}%`);
-      h.style.setProperty('--hy', `${50 + dy * 90}%`);
-    }
+    const f = foil();
+    if (f) f._sx = Math.round(dx * 28);   // foil bands chase the tilt
   });
   el.addEventListener('pointerleave', () => {
     el.style.transform = '';
     el.style.animation = '';
-    for (const h of holos()) {
-      h.style.animation = '';
-      h.style.backgroundPosition = '';
-    }
+    const f = foil();
+    if (f) f._sx = 0;
   });
 }
 

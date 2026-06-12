@@ -481,13 +481,16 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   text-shadow: 3px 3px 0 #000;
 }
 
-/* shine sweep on flip */
+/* shine sweep on flip — hard-edged band, no soft gradient */
 .game-card.flipped .card-front::before {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 30%, rgba(255,250,235,0.6) 50%, transparent 70%);
+  background: linear-gradient(115deg,
+    transparent 42%, rgba(255,250,235,0.28) 42%,
+    rgba(255,250,235,0.65) 48%, rgba(255,250,235,0.65) 54%,
+    rgba(255,250,235,0.28) 60%, transparent 60%);
   background-size: 280% 100%;
-  animation: revealSheen 0.8s ease 0.18s both;
+  animation: revealSheen 0.8s steps(14) 0.18s both;
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 4;
@@ -497,87 +500,16 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   to { background-position: -135% 0; }
 }
 
-/* ============ Pokemon-style holo foils ============ */
-.holo {
+/* ============ pixel foils ============
+   Foils are drawn on a second canvas at the card's own 64x90
+   resolution (see cards.js) — same pixel grid as the art. */
+.foil-canvas {
   position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
   pointer-events: none;
+  mix-blend-mode: screen;
   z-index: 3;
-  background-position: var(--hx, 50%) var(--hy, 50%);
-}
-
-/* RARE — holographic art window (classic holo rare) */
-.holo-art {
-  clip-path: inset(18.9% 6.25% 32.2% 6.25%);
-  background-image: linear-gradient(115deg,
-    transparent 18%, rgba(255,90,170,0.6) 32%, rgba(90,235,210,0.6) 45%,
-    rgba(130,150,255,0.55) 55%, rgba(255,225,110,0.5) 68%, transparent 82%);
-  background-size: 260% 260%;
-  mix-blend-mode: color-dodge;
-  opacity: 0.75;
-  animation: holoDrift 4.4s ease-in-out infinite alternate;
-}
-
-/* EPIC — galaxy foil across the whole card */
-.holo-galaxy {
-  background-image:
-    repeating-radial-gradient(circle at 30% 25%,
-      rgba(176,106,232,0.45) 0 2px, rgba(110,200,235,0.38) 2px 4px, transparent 4px 8px),
-    linear-gradient(120deg,
-      rgba(255,90,170,0.36), rgba(90,190,255,0.36) 40%, rgba(255,225,110,0.3) 75%, rgba(255,90,170,0.36));
-  background-size: 14px 14px, 280% 280%;
-  mix-blend-mode: color-dodge;
-  opacity: 0.58;
-  animation: holoDrift 4s ease-in-out infinite alternate;
-}
-
-/* LEGENDARY — full-card rainbow foil */
-.holo-full {
-  background-image:
-    linear-gradient(110deg,
-      rgba(255,80,80,0.5) 0%, rgba(255,185,60,0.5) 18%, rgba(255,245,110,0.45) 33%,
-      rgba(100,255,170,0.45) 48%, rgba(80,200,255,0.5) 64%, rgba(180,110,255,0.5) 82%,
-      rgba(255,80,80,0.5) 100%),
-    radial-gradient(circle at var(--hx, 50%) var(--hy, 35%), rgba(255,252,240,0.5), transparent 55%);
-  background-size: 300% 300%, 100% 100%;
-  mix-blend-mode: color-dodge;
-  opacity: 0.65;
-  animation: holoDrift 3.4s ease-in-out infinite alternate;
-}
-@keyframes holoDrift {
-  from { background-position: 15% 20%; }
-  to { background-position: 85% 80%; }
-}
-
-/* sweeping light beam (legendary) */
-.beam {
-  background-image: linear-gradient(120deg,
-    transparent 38%, rgba(255,250,235,0.5) 49%, rgba(255,250,235,0.16) 53%, transparent 64%);
-  background-size: 320% 320%;
-  mix-blend-mode: screen;
-  animation: beamSweep 3s ease-in-out infinite;
-}
-@keyframes beamSweep {
-  0% { background-position: 120% 0; }
-  55%, 100% { background-position: -140% 0; }
-}
-
-/* glitter flecks */
-.sparkles {
-  background-image:
-    radial-gradient(1px 1px at 18% 22%, #fff, transparent),
-    radial-gradient(1px 1px at 72% 14%, #fff, transparent),
-    radial-gradient(2px 2px at 86% 38%, #fff, transparent),
-    radial-gradient(1px 1px at 34% 48%, #fff, transparent),
-    radial-gradient(1px 1px at 58% 66%, #fff, transparent),
-    radial-gradient(2px 2px at 12% 76%, #fff, transparent),
-    radial-gradient(1px 1px at 80% 84%, #fff, transparent),
-    radial-gradient(1px 1px at 46% 90%, #fff, transparent);
-  mix-blend-mode: screen;
-  animation: sparkleTwinkle 1.7s steps(2) infinite;
-}
-@keyframes sparkleTwinkle {
-  0%, 100% { opacity: 0.85; transform: translate(0, 0); }
-  50% { opacity: 0.22; transform: translate(1px, 1px); }
 }
 
 /* rarity glows — soft, not neon */
@@ -610,8 +542,11 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   position: absolute; inset: 0;
   backface-visibility: hidden;
   transform: translateZ(3px);
-  background: radial-gradient(circle at 50% 36%, #fffdf6, #f6e9c8 55%, #e3c171 100%);
+  background: #fffdf6;
   box-shadow:
+    inset 0 0 0 4px #f6e9c8,
+    inset 0 0 0 8px #ecd9a4,
+    inset 0 0 0 12px #e3c171,
     0 0 30px rgba(255,250,235,0.95),
     0 0 80px rgba(232,181,77,0.7),
     0 0 160px rgba(232,181,77,0.35);
@@ -1351,14 +1286,7 @@ function buildCardEl(card, { faceUp = false } = {}) {
   drawCardFace(art, card);
   front.appendChild(art);
 
-  const addLayer = cls => {
-    const d = document.createElement('div');
-    d.className = 'holo ' + cls;
-    front.appendChild(d);
-  };
-  if (card.rarity === 'rare') addLayer('holo-art');
-  if (card.rarity === 'epic') { addLayer('holo-galaxy'); addLayer('sparkles'); }
-  if (card.rarity === 'legendary') { addLayer('holo-full'); addLayer('beam'); addLayer('sparkles'); }
+  if (RARITY_ORDER.indexOf(card.rarity) >= 1) attachFoil(front, card);
 
   const back = document.createElement('div');
   back.className = 'card-face card-back-face';
@@ -1513,6 +1441,161 @@ function drawTearProgress(pack, bodyCanvas, tearLine, progress) {
     bctx.fillRect(x, tearLine[x] + 1, 1, 1);
     bctx.fillStyle = pack.colors[0];
     if (x % 3 === 0) bctx.fillRect(x, tearLine[x] + 2, 1, 1);
+  }
+}
+
+/* ============================================================
+   Pixel foil engine — animated foils drawn ON CANVAS at the same
+   64x90 resolution as the card art, stepped at 12fps so the
+   shimmer reads as pixel art, not a plastic sheet on top.
+   - uncommon:  glint running around the metal frame
+   - rare:      rainbow band foil inside the art window + sparkles
+   - epic:      galaxy glitter across the card + diagonal sheen
+   - legendary: full-card rainbow bands, pulsing gold frame,
+                star sparkles and a bright sweep
+   ============================================================ */
+
+const FOIL_FPS = 12;
+const RAINBOW = ['#ff8fb8', '#ffd36e', '#a8f0a0', '#86d9ff', '#c0a0ff'];
+const FOILS = [];
+let foilTimer = null;
+
+function attachFoil(front, card) {
+  const fc = document.createElement('canvas');
+  fc.className = 'foil-canvas';
+  fc.width = CARD_W; fc.height = CARD_H;
+  front.appendChild(fc);
+  // deterministic sparkle positions per card
+  const rnd = mulberry32(card.seed ^ 0x51AB);
+  const spots = [];
+  for (let i = 0; i < 36; i++)
+    spots.push([2 + Math.floor(rnd() * (CARD_W - 4)), 2 + Math.floor(rnd() * (CARD_H - 4))]);
+  FOILS.push({ fc, ctx: fc.getContext('2d'), rarity: card.rarity, spots });
+  if (!foilTimer) {
+    let t = 0;
+    foilTimer = setInterval(() => {
+      t++;
+      for (let i = FOILS.length - 1; i >= 0; i--) {
+        const f = FOILS[i];
+        if (f.fc.isConnected === false) { FOILS.splice(i, 1); continue; }
+        drawFoilFrame(f, t);
+      }
+    }, 1000 / FOIL_FPS);
+  }
+}
+
+/* diagonal rainbow bands, quantized to the pixel grid */
+function foilBands(ctx, t, x0, y0, w, h, alpha, colors, bw) {
+  ctx.globalAlpha = alpha;
+  const n = colors.length;
+  for (let y = y0; y < y0 + h; y++) {
+    const off = y + t;
+    for (let k = Math.floor((x0 + off) / bw) - 1; k * bw - off < x0 + w; k++) {
+      const ci = ((k % (n * 2)) + n * 2) % (n * 2);
+      if (ci >= n) continue;
+      const xs = Math.max(k * bw - off, x0);
+      const xe = Math.min(k * bw - off + bw, x0 + w);
+      if (xe > xs) { ctx.fillStyle = colors[ci]; ctx.fillRect(xs, y, xe - xs, 1); }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* bright diagonal sweep, 3px thick, hard edges */
+function foilSweep(ctx, t, alpha, speed) {
+  const d = (t * speed) % (CARD_W + CARD_H + 50) - 25;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#fffaf0';
+  for (let y = 0; y < CARD_H; y++) {
+    const x = d - y;
+    if (x > -3 && x < CARD_W) ctx.fillRect(Math.max(0, x), y, Math.min(3, CARD_W - Math.max(0, x)), 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function sparklePx(ctx, x, y, color, big) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 1, 1);
+  if (big) {
+    ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1);
+    ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1);
+  }
+}
+
+/* position p along the card's inner frame */
+function perimXY(p) {
+  const w = CARD_W - 2, h = CARD_H - 2, L = 2 * (w + h);
+  p = ((p % L) + L) % L;
+  if (p < w) return [1 + p, 1];
+  p -= w; if (p < h) return [CARD_W - 2, 1 + p];
+  p -= h; if (p < w) return [CARD_W - 2 - p, CARD_H - 2];
+  p -= w; return [1, CARD_H - 2 - p];
+}
+
+function drawFoilFrame(f, t) {
+  const { ctx, rarity, spots, fc } = f;
+  const shift = fc._sx || 0;
+  ctx.clearRect(0, 0, CARD_W, CARD_H);
+
+  if (rarity === 'uncommon') {
+    // a glint chasing around the frame
+    for (let i = 0; i < 6; i++) {
+      const [x, y] = perimXY(t * 4 - i * 2);
+      ctx.globalAlpha = 0.85 - i * 0.13;
+      ctx.fillStyle = i < 2 ? '#ffffff' : '#9fe7b2';
+      ctx.fillRect(x, y, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  if (rarity === 'rare') {
+    foilBands(ctx, t + shift, ART.x, ART.y, ART.w, ART.h, 0.3, RAINBOW, 4);
+    for (let i = 0; i < 8; i++) {
+      const ph = (t + i * 7) % 40;
+      if (ph < 6) {
+        const [x, y] = spots[i];
+        const ax = ART.x + (x % ART.w), ay = ART.y + (y % ART.h);
+        sparklePx(ctx, ax, ay, ph < 3 ? '#ffffff' : '#bfe0ff', ph < 3);
+      }
+    }
+    return;
+  }
+
+  if (rarity === 'epic') {
+    // galaxy glitter: every fleck twinkles on its own clock
+    for (let i = 0; i < spots.length; i++) {
+      const ph = (t + i * 5) % 30;
+      if (ph < 5) {
+        const [x, y] = spots[i];
+        const col = ph < 2 ? '#ffffff' : ['#dcb8ff', '#86d9ff', '#ff8fb8'][i % 3];
+        sparklePx(ctx, x, y, col, ph < 2);
+      }
+    }
+    foilBands(ctx, Math.floor(t / 2) + shift, ART.x, ART.y, ART.w, ART.h, 0.14, ['#dcb8ff', '#86d9ff'], 5);
+    foilSweep(ctx, t, 0.3, 3);
+    return;
+  }
+
+  if (rarity === 'legendary') {
+    foilBands(ctx, t + shift, 2, 2, CARD_W - 4, CARD_H - 4, 0.13, RAINBOW, 4);
+    foilBands(ctx, t + shift, ART.x, ART.y, ART.w, ART.h, 0.2, RAINBOW, 4);
+    // pulsing gold frame
+    if (t % 8 < 4) {
+      ctx.globalAlpha = t % 8 < 2 ? 0.55 : 0.3;
+      ctx.fillStyle = '#fff3c4';
+      ctx.fillRect(1, 1, CARD_W - 2, 1); ctx.fillRect(1, CARD_H - 2, CARD_W - 2, 1);
+      ctx.fillRect(1, 1, 1, CARD_H - 2); ctx.fillRect(CARD_W - 2, 1, 1, CARD_H - 2);
+      ctx.globalAlpha = 1;
+    }
+    for (let i = 0; i < 10; i++) {
+      const ph = (t + i * 4) % 26;
+      if (ph < 5) {
+        const [x, y] = spots[i];
+        sparklePx(ctx, x, y, ph < 2 ? '#ffffff' : '#ffe9a8', true);
+      }
+    }
+    foilSweep(ctx, t, 0.35, 4);
   }
 }
 
@@ -1723,7 +1806,7 @@ const fx = (() => {
 /* 3D tilt that follows the pointer; holo foils shift with the tilt
    like catching the light on a real card */
 function addTilt(el, max = 14) {
-  const holos = () => (el.querySelectorAll ? [...el.querySelectorAll('.holo')] : []);
+  const foil = () => (el.querySelector ? el.querySelector('.foil-canvas') : null);
   el.addEventListener('pointermove', e => {
     const r = el.getBoundingClientRect();
     const dx = (e.clientX - r.left) / r.width - 0.5;
@@ -1731,20 +1814,14 @@ function addTilt(el, max = 14) {
     el.style.animation = 'none';
     el.style.transform =
       `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.08)`;
-    for (const h of holos()) {
-      h.style.animation = 'none';
-      h.style.backgroundPosition = `${50 + dx * 90}% ${50 + dy * 90}%`;
-      h.style.setProperty('--hx', `${50 + dx * 90}%`);
-      h.style.setProperty('--hy', `${50 + dy * 90}%`);
-    }
+    const f = foil();
+    if (f) f._sx = Math.round(dx * 28);   // foil bands chase the tilt
   });
   el.addEventListener('pointerleave', () => {
     el.style.transform = '';
     el.style.animation = '';
-    for (const h of holos()) {
-      h.style.animation = '';
-      h.style.backgroundPosition = '';
-    }
+    const f = foil();
+    if (f) f._sx = 0;
   });
 }
 
