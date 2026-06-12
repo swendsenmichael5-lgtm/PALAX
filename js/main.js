@@ -125,12 +125,13 @@ const fx = (() => {
       const a = Math.random() * Math.PI * 2;
       const v = (0.3 + Math.random()) * power;
       parts.push({
-        x, y,
+        x, y, px: x, py: y,
         vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2,
         life: 1, decay: 0.012 + Math.random() * 0.02,
         size: 3 + Math.random() * 5,
         color: colors[Math.floor(Math.random() * colors.length)],
         spin: (Math.random() - 0.5) * 0.3, rot: Math.random() * Math.PI,
+        trail: power >= 6,                       // fast sparks leave streaks
       });
     }
   }
@@ -139,13 +140,26 @@ const fx = (() => {
     for (let i = 0; i < 110; i++) {
       parts.push({
         x: Math.random() * canvas.width, y: -10 - Math.random() * 150,
+        px: 0, py: 0,
         vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3,
         life: 1, decay: 0.004 + Math.random() * 0.004,
         size: 4 + Math.random() * 5,
         color: ['#f5b83d', '#fe5f55', '#4f9dde', '#56c271', '#b06ae8', '#ffffff'][i % 6],
         spin: (Math.random() - 0.5) * 0.4, rot: Math.random() * Math.PI,
+        conf: true,                              // flutters side to side
       });
     }
+  }
+
+  /* expanding impact ring at any point on screen */
+  function ring(x, y, color = '#f6e3b0') {
+    const d = document.createElement('div');
+    d.className = 'fx-ring';
+    d.style.left = x + 'px';
+    d.style.top = y + 'px';
+    d.style.borderColor = color;
+    document.body.appendChild(d);
+    setTimeout(() => d.remove?.(), 700);
   }
 
   // gentle rising sparkles while a scene is "live" (e.g. pack opening)
@@ -168,8 +182,10 @@ const fx = (() => {
     }
     parts = parts.filter(p => p.life > 0);
     for (const p of parts) {
+      p.px = p.x; p.py = p.y;
       p.x += p.vx; p.y += p.vy;
-      if (!p.float) p.vy += 0.18;
+      if (!p.float) { p.vy += 0.16; p.vx *= 0.985; p.vy *= 0.995; }   // drag = smoother arcs
+      if (p.conf) p.vx += Math.sin(p.rot * 3) * 0.12;                  // confetti flutter
       p.life -= p.decay; p.rot += p.spin;
       ctx.save();
       const a = p.twinkle ? p.life * (0.55 + 0.45 * Math.sin(p.life * 40)) : p.life;
@@ -178,6 +194,11 @@ const fx = (() => {
       ctx.rotate(p.rot);
       ctx.fillStyle = p.color;
       ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      if (p.trail) {   // motion-blur streak behind fast sparks
+        ctx.globalAlpha *= 0.4;
+        ctx.fillRect(-p.size / 2 + (p.px - p.x) * 0.6, -p.size / 2 + (p.py - p.y) * 0.6,
+                     p.size * 0.8, p.size * 0.8);
+      }
       ctx.restore();
     }
     requestAnimationFrame(tick);
@@ -194,7 +215,7 @@ const fx = (() => {
     setTimeout(() => document.body.classList.remove('flashwhite'), 180);
   }
 
-  return { burst, confetti, shake, flash, setAmbient };
+  return { burst, confetti, ring, shake, flash, setAmbient };
 })();
 
 /* ============================================================
@@ -203,23 +224,46 @@ const fx = (() => {
 
 /* 3D tilt that follows the pointer; holo foils shift with the tilt
    like catching the light on a real card */
+/* spring-physics tilt: the card leans toward your finger and
+   glides back when you let go — no snapping */
 function addTilt(el, max = 14) {
   const foil = () => (el.querySelector ? el.querySelector('.foil-canvas') : null);
+  const st = { rx: 0, ry: 0, s: 1, tx: 0, ty: 0, ts: 1, raf: 0, active: false };
+
+  function tick() {
+    st.rx += (st.tx - st.rx) * 0.16;
+    st.ry += (st.ty - st.ry) * 0.16;
+    st.s  += (st.ts - st.s) * 0.16;
+    el.style.transform =
+      `perspective(600px) rotateY(${st.ry.toFixed(2)}deg) rotateX(${st.rx.toFixed(2)}deg) scale(${st.s.toFixed(3)})`;
+    const f = foil();
+    if (f) f._sx = Math.round(st.ry * 1.8);   // foil bands chase the lean
+    if (!st.active && Math.abs(st.rx) < 0.05 && Math.abs(st.ry) < 0.05 && Math.abs(st.s - 1) < 0.002) {
+      el.style.transform = '';
+      el.style.animation = '';
+      st.raf = 0;
+      return;
+    }
+    st.raf = requestAnimationFrame(tick);
+  }
+  const wake = () => { if (!st.raf) st.raf = requestAnimationFrame(tick); };
+
   el.addEventListener('pointermove', e => {
     const r = el.getBoundingClientRect();
     const dx = (e.clientX - r.left) / r.width - 0.5;
     const dy = (e.clientY - r.top) / r.height - 0.5;
     el.style.animation = 'none';
-    el.style.transform =
-      `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.08)`;
-    const f = foil();
-    if (f) f._sx = Math.round(dx * 28);   // foil bands chase the tilt
+    st.active = true;
+    st.ty = dx * max * 2;
+    st.tx = -dy * max * 2;
+    st.ts = 1.08;
+    wake();
   });
   el.addEventListener('pointerleave', () => {
-    el.style.transform = '';
-    el.style.animation = '';
-    const f = foil();
-    if (f) f._sx = 0;
+    st.active = false;
+    st.tx = st.ty = 0;
+    st.ts = 1;
+    wake();
   });
 }
 
@@ -276,6 +320,7 @@ function startOpening(pack) {
   $('shockwave').classList.remove('boom');
   $('cardRow').innerHTML = '';
   $('doneBtn').classList.add('hidden');
+  $('doneBtn').classList.remove('rise');
   $('openOverlay').classList.remove('hidden');
   fx.setAmbient({
     rectFn: () => $('openStage').getBoundingClientRect(),
@@ -414,25 +459,26 @@ function spinReveal(card) {
 
   function spin(now) {
     const t = Math.min(1, (now - start) / SPIN_MS);
-    const vel = 30 - 22 * t;                 // fast → slow
+    // wind up, peak mid-spin, glide down — no jarring start or stop
+    const vel = 4 + 30 * Math.sin(Math.min(1, t * 1.12) * Math.PI);
     rot += vel;
     el.style.transform = `rotateY(${rot}deg)`;
     if (now - lastSpark > 130) {
       lastSpark = now;
       const r = el.getBoundingClientRect();
       fx.burst(r.left + r.width * Math.random(), r.top + r.height * Math.random(),
-               ['#ffffff', '#bfe9ff'], 3, 2 + t * 3);
+               ['#ffffff', '#f6e3b0'], 3, 2 + t * 3);
     }
     if (t < 1) requestAnimationFrame(spin);
     else settle();
   }
 
   function settle() {
-    // glide to face-front, then reveal
+    // glide to face-front with a springy overshoot, then reveal
     const target = Math.ceil(rot / 360) * 360;
-    el.style.transition = 'transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1)';
+    el.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.45, 0.64, 1)';
     el.style.transform = `rotateY(${target}deg)`;
-    setTimeout(reveal, 580);
+    setTimeout(reveal, 640);
   }
 
   function reveal() {
@@ -448,16 +494,19 @@ function spinReveal(card) {
     const pal = RARITIES[card.rarity].palette;
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     fx.burst(cx, cy, ['#ffffff'], 20, 6);
-    if (card.rarity === 'rare') fx.burst(cx, cy, pal, 24, 6);
-    if (card.rarity === 'epic') { fx.burst(cx, cy, pal, 44, 8); }
+    if (card.rarity === 'rare') { fx.burst(cx, cy, pal, 24, 6); fx.ring(cx, cy, pal[1]); }
+    if (card.rarity === 'epic') { fx.burst(cx, cy, pal, 44, 8); fx.ring(cx, cy, pal[1]); }
     if (card.rarity === 'legendary') {
       fx.confetti();
       fx.burst(cx, cy, pal, 70, 11);
+      fx.ring(cx, cy, pal[0]);
+      setTimeout(() => fx.ring(cx, cy, pal[1]), 140);
       if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 120]);
     }
     addCard(card);
     addTilt(el, 12);   // tilt the fresh pull to play with its foil
-    setTimeout(() => $('doneBtn').classList.remove('hidden'), 750);
+    const done = $('doneBtn');
+    setTimeout(() => { done.classList.remove('hidden'); done.classList.add('rise'); }, 750);
   }
 
   requestAnimationFrame(spin);
@@ -589,9 +638,10 @@ function renderCollection() {
   }
   const sorted = [...state.collection].sort((a, b) =>
     RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || a.name.localeCompare(b.name));
-  for (const entry of sorted) {
+  sorted.forEach((entry, i) => {
     const holder = document.createElement('div');
     holder.className = 'coll-card';
+    holder.style.animationDelay = (i * 35) + 'ms';
     const cardEl = buildCardEl(entry, { faceUp: true });
     addTilt(cardEl, 10);
     holder.appendChild(cardEl);
@@ -602,7 +652,7 @@ function renderCollection() {
       holder.appendChild(badge);
     }
     grid.appendChild(holder);
-  }
+  });
 }
 
 /* ============================================================
@@ -639,9 +689,10 @@ function renderTrade() {
   }
   const sorted = [...state.collection].sort((a, b) =>
     RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity));
-  for (const entry of sorted) {
+  sorted.forEach((entry, i) => {
     const holder = document.createElement('div');
     holder.className = 'coll-card';
+    holder.style.animationDelay = (i * 35) + 'ms';
     const cardEl = buildCardEl(entry, { faceUp: true });
     addTilt(cardEl, 10);
     holder.appendChild(cardEl);
@@ -668,7 +719,7 @@ function renderTrade() {
     actions.appendChild(gift);
     holder.appendChild(actions);
     grid.appendChild(holder);
-  }
+  });
 }
 
 $('redeemBtn').addEventListener('click', () => {
