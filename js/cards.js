@@ -411,15 +411,17 @@ function renderPackCanvases(pack, flapCanvas, bodyCanvas, tearLine) {
   bctx.putImageData(bodyImg, 0, 0);
 }
 
-/* draw the bright torn-foil edge as the rip progresses (0..1) */
-function drawTearProgress(pack, bodyCanvas, tearLine, progress) {
+/* draw the bright torn-foil edge as the rip progresses (0..1).
+   dir=1 tears left→right, dir=-1 right→left (from where you grabbed). */
+function drawTearProgress(pack, bodyCanvas, tearLine, progress, dir = 1) {
   const bctx = bodyCanvas.getContext('2d');
   const upto = Math.floor(progress * PACK_W);
-  for (let x = 0; x < upto; x++) {
+  for (let i = 0; i < upto; i++) {
+    const x = dir === 1 ? i : PACK_W - 1 - i;
     bctx.fillStyle = '#ffffff';
     bctx.fillRect(x, tearLine[x] + 1, 1, 1);
     bctx.fillStyle = pack.colors[0];
-    if (x % 3 === 0) bctx.fillRect(x, tearLine[x] + 2, 1, 1);
+    if (i % 3 === 0) bctx.fillRect(x, tearLine[x] + 2, 1, 1);
   }
 }
 

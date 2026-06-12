@@ -422,11 +422,10 @@ body.flashwhite #flash { opacity: 0.75; }
   width: 240px;
   image-rendering: pixelated;
 }
-#packBody { height: 320px; transition: filter 0.13s ease-out; }
-#packFlap { height: 90px; z-index: 2; transition: transform 0.09s ease-out; }
+#packBody { height: 320px; z-index: 2; transition: filter 0.13s ease-out; }
+#packFlap { height: 90px; z-index: 3; transition: transform 0.09s ease-out; }
 #packFlap.flying {
-  transition: transform 0.7s cubic-bezier(0.25, 0.5, 0.3, 1), opacity 0.7s;
-  transform: translate(150px, -340px) rotate(80deg) scale(1.15) !important;
+  transition: transform 0.7s cubic-bezier(0.25, 0.5, 0.3, 1) !important, opacity 0.7s !important;
   opacity: 0;
 }
 .pack-wrap.shaking { animation: packShake 0.08s linear infinite; }
@@ -451,7 +450,7 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   gap: 14px;
   justify-content: center;
   perspective: 1000px;
-  min-height: 150px;
+  min-height: 0;
   z-index: 3;
 }
 
@@ -1021,4 +1020,25 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   35% { rotate: 3deg; }
   55% { rotate: -2deg; }
   75% { rotate: 1deg; }
+}
+
+/* ============================================================
+   Physical opening: card emerges from the pack, wrapper falls
+   ============================================================ */
+.pop-wrap.in-pack {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  margin-left: -96px;
+  width: 192px; height: 270px;
+  z-index: 1;
+  animation: none;
+}
+#packBody.dropping {
+  animation: wrapperFall 0.85s cubic-bezier(0.45, 0, 0.8, 0.4) forwards !important;
+}
+@keyframes wrapperFall {
+  20% { transform: translateY(26px) rotate(3deg); opacity: 1; }
+  60% { transform: translateY(210px) rotate(-9deg); opacity: 1; }
+  100% { transform: translateY(440px) rotate(15deg); opacity: 0; }
 }

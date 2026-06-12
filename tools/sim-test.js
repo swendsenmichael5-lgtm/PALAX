@@ -120,21 +120,25 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   byId.packWrap.fire('pointerup', {});
   assert(byId.packFlap.classList.contains('flying'), 'flap flies off after full swipe');
 
-  await sleep(600);   // pack body drops (420ms), spinReveal starts
-  assert(byId.cardRow.children.length === 1, 'ONE card pops out');
-  const popWrap = byId.cardRow.children[0];
-  assert(popWrap.classList.contains('pop-wrap'), 'card is wrapped in pop-out animator');
+  await sleep(700);   // flap flies (500ms), card starts emerging from the pack
+  const popWrap = byId.packWrap.children.find?.(c => c.classList?.contains('pop-wrap'))
+    || byId.packWrap.children[byId.packWrap.children.length - 1];
+  assert(popWrap && popWrap.classList.contains('pop-wrap'), 'ONE card emerges from the torn pack');
+  assert(popWrap.classList.contains('in-pack'), 'card rises through the torn opening');
   const card = popWrap.children[0];
   assert(card.classList.contains('big-reveal'), 'card is the big reveal card');
   const cover = card.children[card.children.length - 1];
   assert(cover.classList.contains('mystery-cover'), 'card spins under a white mystery cover');
   assert(byId.stageRays.classList.contains('on'), 'white suspense rays are on');
 
-  await sleep(800);
+  await sleep(1100);  // wrapper drop fires at 1000ms (after 500ms flap delay)
+  assert(byId.packBody.classList.contains('dropping'), 'empty wrapper tumbles away');
+
+  await sleep(700);   // spin starts at ~1280ms
   assert(/rotateY/.test(card.style.transform), 'card is actively spinning');
   assert(!cover.classList.contains('off'), 'rarity still hidden mid-spin');
 
-  await sleep(2700);  // spin (2300) + settle (580) + margin
+  await sleep(3500);  // spin (2300) + settle (640) + margin
   assert(cover.classList.contains('off'), 'cover lifts — rarity revealed');
   assert(card.classList.contains('flipped'), 'reveal jolt triggered');
   const coll = readSave().collection || [];

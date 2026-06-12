@@ -151,6 +151,21 @@ const fx = (() => {
     }
   }
 
+  /* torn foil shreds that flutter down like confetti scraps */
+  function shred(x, y, colors, n = 4) {
+    for (let i = 0; i < n; i++) {
+      parts.push({
+        x: x + (Math.random() - 0.5) * 10, y, px: x, py: y,
+        vx: (Math.random() - 0.5) * 1.4, vy: 0.4 + Math.random() * 1.2,
+        life: 1, decay: 0.011 + Math.random() * 0.012,
+        size: 2 + Math.random() * 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        spin: (Math.random() - 0.5) * 0.5, rot: Math.random() * Math.PI,
+        conf: true,                              // flutter like paper
+      });
+    }
+  }
+
   /* expanding impact ring at any point on screen */
   function ring(x, y, color = '#f6e3b0') {
     const d = document.createElement('div');
@@ -215,7 +230,7 @@ const fx = (() => {
     setTimeout(() => document.body.classList.remove('flashwhite'), 180);
   }
 
-  return { burst, confetti, ring, shake, flash, setAmbient };
+  return { burst, confetti, shred, ring, shake, flash, setAmbient };
 })();
 
 /* ============================================================
@@ -328,9 +343,16 @@ function startOpening(pack) {
   opening = { pack, tearLine, progress: 0, torn: false, cards: rollPack(pack), revealed: 0, lastRipSfx: 0 };
 
   renderPackCanvases(pack, $('packFlap'), $('packBody'), tearLine);
-  $('packFlap').classList.remove('flying');
-  $('packFlap').style.transform = '';
-  $('packBody').style.filter = `drop-shadow(0 0 10px ${pack.colors[1]}66)`;
+  currentPop?.remove?.();
+  currentPop = null;
+  const flap = $('packFlap'), body = $('packBody');
+  flap.classList.remove('flying');
+  flap.style.transition = 'none';
+  flap.style.transform = '';
+  body.classList.remove('dropping');
+  body.style.transition = 'none';
+  body.style.transform = '';
+  body.style.filter = `drop-shadow(0 0 10px ${pack.colors[1]}66)`;
   $('packWrap').classList.add('idle');
   $('packWrap').style.display = '';
   $('ripHint').style.display = '';
@@ -348,7 +370,9 @@ function startOpening(pack) {
   buildShop(); // refresh pity counter text behind the overlay
 }
 
-/* --- rip gesture: pointer drag across the top of the pack --- */
+/* --- rip gesture: grab either side of the top and tear across.
+       The flap hinges from the untorn side, the body stretches
+       toward your pull, and letting go early snaps it back. --- */
 (() => {
   const wrap = $('packWrap');
   let ripping = false;
@@ -366,6 +390,11 @@ function startOpening(pack) {
     ripping = true;
     startX = p.x;
     maxTravel = 0;
+    opening.dir = p.x < 0.5 ? 1 : -1;  // tear away from the grabbed side
+    const flap = $('packFlap');
+    flap.style.transition = 'none';
+    flap.style.transformOrigin = opening.dir === 1 ? '100% 60%' : '0% 60%';
+    $('packBody').style.transition = 'none';
     wrap.classList.remove('idle');
     wrap.classList.add('shaking');
     wrap.setPointerCapture(e.pointerId);
@@ -378,32 +407,48 @@ function startOpening(pack) {
     maxTravel = Math.max(maxTravel, Math.abs(p.x - startX));
     const progress = Math.min(1, maxTravel / 0.72);
     if (progress > opening.progress) {
+      const d = opening.dir;
       opening.progress = progress;
-      drawTearProgress(opening.pack, $('packBody'), opening.tearLine, progress);
-      // flap peels as you rip, light leaks out of the widening tear
+      drawTearProgress(opening.pack, $('packBody'), opening.tearLine, progress, d);
+      // flap peels up from its hinge; body leans into the pull
       $('packFlap').style.transform =
-        `translate(${-progress * 12}px, ${-progress * 18}px) rotate(${-progress * 10}deg)`;
+        `translate(${d * progress * 10}px, ${-progress * 16}px) rotate(${d * progress * 16}deg)`;
+      $('packBody').style.transform =
+        `translateX(${d * progress * 5}px) skewX(${d * progress * 2.5}deg)`;
       $('packBody').style.filter =
         `drop-shadow(0 0 ${10 + progress * 30}px ${opening.pack.colors[1]}) brightness(${1 + progress * 0.25})`;
       const now = performance.now();
       if (now - opening.lastRipSfx > 55) {
         opening.lastRipSfx = now;
         AudioEngine.sfx.rip(progress);
-        if (navigator.vibrate) navigator.vibrate(8);
-        // sparks fly from the tear tip
+        if (navigator.vibrate) navigator.vibrate(progress > 0.7 ? 14 : 8);
+        // sparks + falling foil shreds at the tear tip
         const r = wrap.getBoundingClientRect();
-        fx.burst(r.left + r.width * progress, r.top + r.height * 0.2,
-                 ['#ffffff', opening.pack.colors[0]], 4, 3);
+        const tipX = r.left + r.width * (d === 1 ? progress : 1 - progress);
+        fx.burst(tipX, r.top + r.height * 0.2, ['#ffffff', opening.pack.colors[0]], 3, 3);
+        fx.shred(tipX, r.top + r.height * 0.22,
+                 [opening.pack.colors[1], opening.pack.colors[2], '#1f2734'], 3);
       }
       if (progress >= 1) finishRip();
     }
   });
 
   function release() {
+    if (!ripping) return;
     ripping = false;
     if (opening && !opening.torn) {
       wrap.classList.remove('shaking');
       wrap.classList.add('idle');
+      if (opening.progress > 0.04) {
+        // the half-torn flap snaps back elastically
+        const flap = $('packFlap'), body = $('packBody');
+        flap.style.transition = 'transform 0.4s cubic-bezier(0.3, 2.2, 0.5, 1)';
+        body.style.transition = 'transform 0.4s cubic-bezier(0.3, 2.2, 0.5, 1)';
+        flap.style.transform = `translate(${opening.dir * 2}px, -2px) rotate(${opening.dir * 2}deg)`;
+        body.style.transform = '';
+        AudioEngine.sfx.snapBack();
+        if (navigator.vibrate) navigator.vibrate(12);
+      }
     }
   }
   wrap.addEventListener('pointerup', release);
@@ -421,8 +466,12 @@ function finishRip() {
   fx.flash();
   if (navigator.vibrate) navigator.vibrate([30, 20, 60]);
 
-  // foil flap flies off
-  $('packFlap').classList.add('flying');
+  // foil flap launches away from the tear direction
+  const flap = $('packFlap');
+  flap.classList.add('flying');
+  flap.style.transform =
+    `translate(${o.dir * 240}px, -340px) rotate(${o.dir * 90}deg) scale(1.1)`;
+  $('packBody').style.transform = '';
 
   const r = wrap.getBoundingClientRect();
   const stage = $('openStage').getBoundingClientRect();
@@ -435,25 +484,29 @@ function finishRip() {
   void shock.offsetWidth;
   shock.classList.add('boom');
 
-  // particle eruption from the tear
-  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, o.pack.colors, 50, 10);
-  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, ['#ffffff'], 16, 5);
+  // foil confetti + sparks erupt from the opening
+  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, o.pack.colors, 44, 10);
+  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, ['#ffffff'], 14, 5);
+  fx.shred(r.left + r.width / 2, r.top + r.height * 0.2,
+           [o.pack.colors[1], o.pack.colors[2], '#1f2734'], 14);
 
-  // pack body drops away, the mystery card pops out
+  // the pack stays in hand — the card slides out of the torn opening
   setTimeout(() => {
-    wrap.style.display = 'none';
     $('ripHint').style.display = 'none';
     spinReveal(o.cards[0]);
-  }, 420);
+  }, 500);
 }
 
-/* The big moment: one card pops out of the pack, spins as a
-   white-hot mystery, slows down... then SLAMS into its rarity. */
+/* The big moment, in real stages: the card slides up out of the
+   torn pack, the empty wrapper tumbles to the floor, then the card
+   spins as a white-hot mystery and SLAMS into its rarity. */
+let currentPop = null;
 function spinReveal(card) {
-  const row = $('cardRow');
-  row.innerHTML = '';
+  const host = $('packWrap');
+  currentPop?.remove?.();
   const wrap = document.createElement('div');
-  wrap.className = 'pop-wrap';
+  wrap.className = 'pop-wrap in-pack';
+  currentPop = wrap;
   const el = buildCardEl(card);
   el.classList.add('big-reveal');
   el.style.transition = 'none';   // JS drives the spin, not the flip transition
@@ -463,20 +516,45 @@ function spinReveal(card) {
   coverBack.className = 'mystery-cover back';
   el.append(cover, coverBack);
   wrap.appendChild(el);
-  row.appendChild(wrap);
-
-  AudioEngine.sfx.cardSlide(0);
-  AudioEngine.sfx.riser(2.4);
+  host.appendChild(wrap);
 
   // white rays while fate is undecided
   $('stageRays').style.setProperty('--raycolor', '#ffffff');
   $('stageRays').classList.add('on');
 
+  // phase 1: the card rises out of the torn opening
+  wrap.style.transition = 'none';
+  wrap.style.transform = 'translateY(46px)';
+  AudioEngine.sfx.cardDraw();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    wrap.style.transition = 'transform 1s cubic-bezier(0.3, 1, 0.4, 1)';
+    wrap.style.transform = 'translateY(-150px)';
+  }));
+
+  // phase 2: the empty wrapper tumbles to the floor
+  setTimeout(() => {
+    const body = $('packBody');
+    body.classList.add('dropping');
+    AudioEngine.sfx.bodyDrop();
+    const r = host.getBoundingClientRect();
+    fx.shred(r.left + r.width / 2, r.top + r.height * 0.5,
+             [opening.pack.colors[1], '#1f2734'], 6);
+  }, 1000);
+
+  // phase 3: card settles center and starts its mystery spin
+  setTimeout(() => {
+    wrap.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1)';
+    wrap.style.transform = 'translateY(-60px)';
+    AudioEngine.sfx.riser(2.4);
+    requestAnimationFrame(spin);
+  }, 1280);
+
   const SPIN_MS = 2300;
-  const start = performance.now();
+  let start = 0;
   let rot = 0, lastSpark = 0;
 
   function spin(now) {
+    if (!start) start = now;
     const t = Math.min(1, (now - start) / SPIN_MS);
     // wind up, peak mid-spin, glide down — no jarring start or stop
     const vel = 4 + 30 * Math.sin(Math.min(1, t * 1.12) * Math.PI);
@@ -537,8 +615,6 @@ function spinReveal(card) {
     const done = $('doneBtn');
     setTimeout(() => { done.classList.remove('hidden'); done.classList.add('rise'); }, 750);
   }
-
-  requestAnimationFrame(spin);
 }
 
 $('doneBtn').addEventListener('click', () => {
