@@ -509,6 +509,14 @@ function spinReveal(card) {
     AudioEngine.sfx.reveal(card.rarity);
     $('stageRays').style.setProperty('--raycolor', RARITIES[card.rarity].color);
 
+    // rarity stamp slams in over the card
+    const stamp = document.createElement('div');
+    stamp.className = 'rarity-stamp';
+    stamp.textContent = RARITIES[card.rarity].label + '!';
+    stamp.style.color = RARITIES[card.rarity].color;
+    $('openStage').appendChild(stamp);
+    setTimeout(() => stamp.remove?.(), 1500);
+
     const r = el.getBoundingClientRect();
     const pal = RARITIES[card.rarity].palette;
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -970,3 +978,16 @@ drawMuteIcon();
               'DOUBLE OR NOTHING PAYS THE BOLD ◆ ';
   $('tickerTrack').textContent = msg + msg;   // doubled for a seamless loop
 })();
+
+/* the idle pack shivers with anticipation every few seconds */
+setInterval(() => {
+  if (!document.querySelector) return;
+  if (!$('screen-shop').classList.contains('active') || opening) return;
+  const holo = document.querySelector('.pack-holo');
+  if (!holo) return;
+  holo.classList.add('tease');
+  const r = holo.getBoundingClientRect();
+  fx.burst(r.left + r.width * (0.2 + Math.random() * 0.6), r.top + r.height * 0.25,
+           ['#f6e3b0', '#fffaf0'], 5, 3);
+  setTimeout(() => holo.classList.remove('tease'), 650);
+}, 6500);

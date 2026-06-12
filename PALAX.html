@@ -995,6 +995,43 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   opacity: 0.25;
 }
 
+/* ============================================================
+   Final art pass: drawn card backs, rarity stamp, pack tease
+   ============================================================ */
+
+/* card back is now fully drawn on canvas */
+.card-back-face { border: none; background: none; box-shadow: 0 0 12px rgba(232,181,77,0.2); }
+.card-back-face::before, .card-back-face::after { content: none; }
+
+/* rarity stamp slams over the revealed card */
+.rarity-stamp {
+  position: absolute;
+  left: 50%; top: 16%;
+  translate: -50%;
+  font-size: 17px;
+  letter-spacing: 3px;
+  text-shadow: 0 3px 0 rgba(0,0,0,0.85), 0 0 22px currentColor;
+  pointer-events: none;
+  z-index: 8;
+  animation: stampIn 1.5s cubic-bezier(0.18, 1.5, 0.4, 1) both;
+}
+@keyframes stampIn {
+  0% { opacity: 0; transform: scale(3.2) rotate(-7deg); }
+  14% { opacity: 1; transform: scale(1) rotate(-2deg); }
+  20% { transform: scale(1.12) rotate(1deg); }
+  26%, 78% { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(0.92) translateY(-12px); }
+}
+
+/* idle pack shiver of anticipation */
+.pack-holo.tease { animation: packTease 0.6s ease, packFloat 3.4s ease-in-out 0.6s infinite; }
+@keyframes packTease {
+  15% { rotate: -3.5deg; filter: drop-shadow(0 18px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 36px rgba(232,181,77,0.7)) brightness(1.18); }
+  35% { rotate: 3deg; }
+  55% { rotate: -2deg; }
+  75% { rotate: 1deg; }
+}
+
 </style>
 </head>
 <body>
@@ -1503,17 +1540,47 @@ function drawCardFace(canvas, card) {
     ctx.fillStyle = rnd() < 0.7 ? '#f1e9d6' : pal[0];
     ctx.fillRect(ART.x + Math.floor(rnd() * ART.w), ART.y + Math.floor(rnd() * 20), 1, 1);
   }
-  // crescent moon, upper right
-  const mx = ART.x + ART.w - 11, my = ART.y + 9, mr = 5;
-  for (let dy = -mr; dy <= mr; dy++) {
-    const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
-    ctx.fillStyle = '#f6e9c8';
-    ctx.fillRect(mx - half, my + dy, half * 2 || 1, 1);
-  }
-  for (let dy = -mr; dy <= mr; dy++) {   // carve the shadow side
-    const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
-    ctx.fillStyle = '#11161f';
-    ctx.fillRect(mx + 2 - half, my + dy, half * 2 || 1, 1);
+  // seeded sky: crescent night / comet night / aurora night
+  const sky = card.seed % 3;
+  if (sky === 0) {
+    // crescent moon, upper right
+    const mx = ART.x + ART.w - 11, my = ART.y + 9, mr = 5;
+    for (let dy = -mr; dy <= mr; dy++) {
+      const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
+      ctx.fillStyle = '#f6e9c8';
+      ctx.fillRect(mx - half, my + dy, half * 2 || 1, 1);
+    }
+    for (let dy = -mr; dy <= mr; dy++) {   // carve the shadow side
+      const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
+      ctx.fillStyle = '#11161f';
+      ctx.fillRect(mx + 2 - half, my + dy, half * 2 || 1, 1);
+    }
+  } else if (sky === 1) {
+    // full moon upper left + falling comet
+    const mx = ART.x + 10, my = ART.y + 8, mr = 4;
+    for (let dy = -mr; dy <= mr; dy++) {
+      const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
+      ctx.fillStyle = '#f6e9c8';
+      ctx.fillRect(mx - half, my + dy, half * 2 || 1, 1);
+    }
+    ctx.fillStyle = '#e3d4ae';   // craters
+    ctx.fillRect(mx - 1, my - 1, 1, 1); ctx.fillRect(mx + 2, my + 1, 1, 1);
+    const cx0 = ART.x + ART.w - 8, cy0 = ART.y + 4;
+    for (let i = 0; i < 7; i++) {   // comet streak
+      ctx.fillStyle = i < 2 ? '#fffaf0' : pal[0];
+      ctx.globalAlpha = i < 2 ? 1 : 1 - i * 0.13;
+      ctx.fillRect(cx0 - i, cy0 + i, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    // aurora ribbons rippling across the sky
+    for (let x = ART.x; x < ART.x + ART.w; x++) {
+      const w1 = ART.y + 7 + Math.round(2.5 * Math.sin((x - ART.x) / 4.5));
+      const w2 = ART.y + 12 + Math.round(2 * Math.sin((x - ART.x) / 3.5 + 2));
+      ctx.fillStyle = pal[1]; ctx.globalAlpha = 0.55; ctx.fillRect(x, w1, 1, 2);
+      ctx.fillStyle = pal[0]; ctx.globalAlpha = 0.4;  ctx.fillRect(x, w2, 1, 1);
+    }
+    ctx.globalAlpha = 1;
   }
   // mountain silhouettes along the base
   const p1 = ART.x + Math.floor(ART.w * 0.28), p2 = ART.x + Math.floor(ART.w * 0.74);
@@ -1531,23 +1598,17 @@ function drawCardFace(canvas, card) {
   ctx.fillRect(ART.x + 3, BASE - 5, ART.w - 9, 1);
   ctx.fillRect(ART.x + 9, BASE - 3, ART.w - 15, 1);
 
-  // creature sprite, 14x14 mirrored at 3x — big and chunky
-  const G = 14, sc = 3;
-  const ox = ART.x + Math.floor((ART.w - G * sc) / 2);
-  const oy = ART.y + Math.floor((ART.h - G * sc) / 2) + 1;
-  const srnd = mulberry32(card.seed);
-  ctx.fillStyle = 'rgba(5,3,12,0.7)';
-  ctx.fillRect(ox - 2, oy - 2, G * sc + 4, G * sc + 4);
-  for (let y = 0; y < G; y++)
-    for (let x = 0; x < Math.ceil(G / 2); x++)
-      if (srnd() < 0.46) {
-        ctx.fillStyle = pal[Math.floor(srnd() * 3)];
-        ctx.fillRect(ox + x * sc, oy + y * sc, sc, sc);
-        ctx.fillRect(ox + (G - 1 - x) * sc, oy + y * sc, sc, sc);
-      }
-  ctx.fillStyle = card.rarity === 'legendary' ? '#fff7d6' : '#ffffff';
-  ctx.fillRect(ox + 12, oy + 12, sc, sc);
-  ctx.fillRect(ox + G * sc - 12 - sc, oy + 12, sc, sc);
+  // the card's character: its hand-drawn portrait sprite
+  const subject = card.name.split(' ')[1];
+  const map = SPRITES[subject] || SPRITES.GHOST;
+  const sc = 3;
+  const spriteW = 14 * sc, spriteH = map.length * sc;
+  const ox = ART.x + Math.floor((ART.w - spriteW) / 2);
+  const oy = ART.y + Math.max(2, Math.floor((ART.h - spriteH) / 2) + 2);
+  ctx.fillStyle = 'rgba(5,3,12,0.55)';
+  ctx.fillRect(ox - 2, oy - 2, spriteW + 4, spriteH + 4);
+  drawSprite(ctx, map, ox, oy, sc, pal,
+             card.rarity === 'legendary' ? '#fff7d6' : '#ffffff');
 
   // art window frame
   ctx.fillStyle = fMid;
@@ -1607,6 +1668,10 @@ function buildCardEl(card, { faceUp = false } = {}) {
 
   const back = document.createElement('div');
   back.className = 'card-face card-back-face';
+  const backArt = document.createElement('canvas');
+  backArt.className = 'card-art';
+  drawCardBack(backArt);
+  back.appendChild(backArt);
   el.append(front, back);
   return el;
 }
@@ -1914,6 +1979,300 @@ function drawFoilFrame(f, t) {
     }
     foilSweep(ctx, t, 0.35, 4);
   }
+}
+
+/* ============================================================
+   Hand-authored character sprites — one per card subject, so a
+   WITCH card shows a witch and a KNIGHT shows a knight.
+   Legend: '#' outline, '1'/'2'/'3' palette tones, 'w' white,
+           'e' glowing eye, '.' empty. 14 px wide.
+   ============================================================ */
+const SPRITES = {
+  GHOST: [
+    '....######....',
+    '..##222222##..',
+    '..#22222222#..',
+    '.#2222222222#.',
+    '.#22#222#222#.',
+    '.#2222222222#.',
+    '.#2222#22222#.',
+    '.#2222222222#.',
+    '.#2222222222#.',
+    '.#2#22#22#22#.',
+    '..#2.#2.#2.#..',
+  ],
+  WIZARD: [
+    '......##......',
+    '.....#33#.....',
+    '....#3333#....',
+    '...#333333#...',
+    '..#33333333#..',
+    '.############.',
+    '...#211112#...',
+    '...#2e11e2#...',
+    '...#111111#...',
+    '..#11122111#..',
+    '..#1#2222#1#..',
+    '...#222222#...',
+    '....#2222#....',
+    '.....####.....',
+  ],
+  JOKER: [
+    '..w....w....w.',
+    '.#2#..#1#..#2#',
+    '.#22##11##22#.',
+    '..#22211222#..',
+    '...########...',
+    '...#111111#...',
+    '..#11e11e11#..',
+    '..#11111111#..',
+    '..#1#1111#1#..',
+    '...#1####1#...',
+    '...#111111#...',
+    '....######....',
+  ],
+  JESTER: [
+    '....w....w....',
+    '...#2#..#2#...',
+    '...#22##22#...',
+    '....#2222#....',
+    '...########...',
+    '..#11111111#..',
+    '..#1#2##2#1#..',
+    '..#11211211#..',
+    '..#11111111#..',
+    '...#1####1#...',
+    '...#111111#...',
+    '....######....',
+  ],
+  KNIGHT: [
+    '......##......',
+    '.....#ww#.....',
+    '....#wwww#....',
+    '...########...',
+    '..#33333333#..',
+    '..#33333333#..',
+    '..#3#eeee#3#..',
+    '..#33####33#..',
+    '..#33333333#..',
+    '...#333333#...',
+    '...#3#33#3#...',
+    '....##..##....',
+  ],
+  IMP: [
+    '..#........#..',
+    '.#3#......#3#.',
+    '.#33#....#33#.',
+    '..#33####33#..',
+    '...#222222#...',
+    '..#22222222#..',
+    '..#2e2222e2#..',
+    '..#22222222#..',
+    '..#2#w##w#2#..',
+    '...#2####2#...',
+    '....#2222#....',
+    '.....####.....',
+  ],
+  ORACLE: [
+    '......##......',
+    '.....#33#.....',
+    '....#3333#....',
+    '...#333333#...',
+    '..#33####33#..',
+    '.#33#2222#33#.',
+    '.#3#22ee22#3#.',
+    '#33#222222#33#',
+    '#33##2222##33#',
+    '.#33######33#.',
+    '..#33333333#..',
+    '...########...',
+  ],
+  SPHINX: [
+    '..#........#..',
+    '.#3#......#3#.',
+    '.#33######33#.',
+    '.#3333333333#.',
+    '..#11111111#..',
+    '..#1e1111e1#..',
+    '..#11111111#..',
+    '..#11#11#11#..',
+    '...#111111#...',
+    '..#33333333#..',
+    '...########...',
+  ],
+  GAMBLER: [
+    '...########...',
+    '...#333333#...',
+    '...#333333#...',
+    '..##########..',
+    '.#1111111111#.',
+    '..#11111111#..',
+    '..#1e1111e1#..',
+    '..#11111111#..',
+    '..#111##111#..',
+    '...#111111#...',
+    '....######....',
+    '...#2#..#2#...',
+    '....#2##2#....',
+  ],
+  PHANTOM: [
+    '.....####.....',
+    '....#3333#....',
+    '...#333333#...',
+    '..#33####33#..',
+    '..#3#....#3#..',
+    '.#33.e..e.33#.',
+    '.#33......33#.',
+    '.#333####333#.',
+    '.#3333333333#.',
+    '.#3333333333#.',
+    '.#33#3333#33#.',
+    '.#3#..##..#3#.',
+  ],
+  BANDIT: [
+    '...########...',
+    '..#33333333#..',
+    '.############.',
+    '..#11111111#..',
+    '..##########..',
+    '..##e####e##..',
+    '..##########..',
+    '..#11111111#..',
+    '..#111##111#..',
+    '...#222222#...',
+    '..#22222222#..',
+    '...#2#22#2#...',
+  ],
+  DEALER: [
+    '...########...',
+    '..#22222222#..',
+    '.#2222222222#.',
+    '..##########..',
+    '..#11111111#..',
+    '..#1e1111e1#..',
+    '..#11111111#..',
+    '..#111##111#..',
+    '...#111111#...',
+    '....######....',
+    '...#.#33#.#...',
+    '.....#33#.....',
+  ],
+  TRICKSTER: [
+    '...########...',
+    '..#22221111#..',
+    '.#2222211111#.',
+    '.#22e2211e11#.',
+    '.#2222211111#.',
+    '.#2#222111#1#.',
+    '.#22##11##11#.',
+    '..#22221111#..',
+    '...########...',
+    '....#3##3#....',
+  ],
+  BARON: [
+    '..w..w..w..w..',
+    '..#..#..#..#..',
+    '..##########..',
+    '..#33333333#..',
+    '..#11111111#..',
+    '..#1e11#e#1#..',
+    '..#11111111#..',
+    '..#11##1111#..',
+    '...#1####1#...',
+    '...#111111#...',
+    '....######....',
+  ],
+  WITCH: [
+    '......##......',
+    '.....#33#.....',
+    '.....#333#....',
+    '....#3333#....',
+    '.############.',
+    '...#333333#...',
+    '..#11111111#..',
+    '..#1e1111e1#..',
+    '..#11111111#..',
+    '..#111##111#..',
+    '..#2#1111#2#..',
+    '..#2.####.2#..',
+  ],
+  FOOL: [
+    '..w........w..',
+    '.#2#......#2#.',
+    '..#2#....#2#..',
+    '...#2####2#...',
+    '...#222222#...',
+    '..#11111111#..',
+    '..#1e1111e1#..',
+    '..#11111111#..',
+    '..#11#11#11#..',
+    '...#1#ww#1#...',
+    '....#1##1#....',
+    '.....####.....',
+  ],
+};
+
+function drawSprite(ctx, map, x0, y0, sc, pal, eyeColor) {
+  const colors = { '#': '#0a0d12', '1': pal[0], '2': pal[1], '3': pal[2], 'w': '#fffaf0', 'e': eyeColor };
+  map.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const ch = row[x];
+      if (ch === '.' || !colors[ch]) continue;
+      ctx.fillStyle = colors[ch];
+      ctx.fillRect(x0 + x * sc, y0 + y * sc, sc, sc);
+    }
+  });
+}
+
+/* Pixel card back: navy weave, gold double border, crescent crest */
+function drawCardBack(canvas) {
+  canvas.width = CARD_W;
+  canvas.height = CARD_H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#1a2230';
+  ctx.fillRect(0, 0, CARD_W, CARD_H);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  for (let y = 0; y < CARD_H; y++)
+    for (let x = (y % 4); x < CARD_W; x += 4) ctx.fillRect(x, y, 1, 1);
+  ctx.fillStyle = '#0a0d12';
+  ctx.fillRect(0, 0, CARD_W, 1); ctx.fillRect(0, CARD_H - 1, CARD_W, 1);
+  ctx.fillRect(0, 0, 1, CARD_H); ctx.fillRect(CARD_W - 1, 0, 1, CARD_H);
+  ctx.fillStyle = '#e8b54d';
+  ctx.fillRect(2, 2, CARD_W - 4, 1); ctx.fillRect(2, CARD_H - 3, CARD_W - 4, 1);
+  ctx.fillRect(2, 2, 1, CARD_H - 4); ctx.fillRect(CARD_W - 3, 2, 1, CARD_H - 4);
+  ctx.fillStyle = '#a87b24';
+  ctx.fillRect(5, 5, CARD_W - 10, 1); ctx.fillRect(5, CARD_H - 6, CARD_W - 10, 1);
+  ctx.fillRect(5, 5, 1, CARD_H - 10); ctx.fillRect(CARD_W - 6, 5, 1, CARD_H - 10);
+  // crescent crest in a ring
+  const cx = CARD_W / 2, cy = CARD_H / 2, R = 13;
+  for (let dy = -R; dy <= R; dy++) {
+    const half = Math.floor(Math.sqrt(R * R - dy * dy));
+    ctx.fillStyle = '#a87b24';
+    ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -(R - 2); dy <= R - 2; dy++) {
+    const half = Math.floor(Math.sqrt((R - 2) * (R - 2) - dy * dy));
+    ctx.fillStyle = '#141a24';
+    ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -6; dy <= 6; dy++) {
+    const half = Math.floor(Math.sqrt(36 - dy * dy));
+    ctx.fillStyle = '#e8b54d';
+    ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -6; dy <= 6; dy++) {
+    const half = Math.floor(Math.sqrt(36 - dy * dy));
+    ctx.fillStyle = '#141a24';
+    ctx.fillRect(cx + 2 - half, cy + dy, half * 2 || 1, 1);
+  }
+  ctx.fillStyle = '#f6e3b0';
+  ctx.fillRect(cx + 3, cy - 2, 1, 3);
+  ctx.fillRect(cx + 2, cy - 1, 3, 1);
+  // corner pips
+  ctx.fillStyle = '#a87b24';
+  [[8, 8], [CARD_W - 10, 8], [8, CARD_H - 10], [CARD_W - 10, CARD_H - 10]].forEach(([x, y]) => {
+    ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y + 1, 3, 1); ctx.fillRect(x + 1, y + 2, 1, 1);
+  });
 }
 
 ;
@@ -2428,6 +2787,14 @@ function spinReveal(card) {
     AudioEngine.sfx.reveal(card.rarity);
     $('stageRays').style.setProperty('--raycolor', RARITIES[card.rarity].color);
 
+    // rarity stamp slams in over the card
+    const stamp = document.createElement('div');
+    stamp.className = 'rarity-stamp';
+    stamp.textContent = RARITIES[card.rarity].label + '!';
+    stamp.style.color = RARITIES[card.rarity].color;
+    $('openStage').appendChild(stamp);
+    setTimeout(() => stamp.remove?.(), 1500);
+
     const r = el.getBoundingClientRect();
     const pal = RARITIES[card.rarity].palette;
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -2889,6 +3256,19 @@ drawMuteIcon();
               'DOUBLE OR NOTHING PAYS THE BOLD ◆ ';
   $('tickerTrack').textContent = msg + msg;   // doubled for a seamless loop
 })();
+
+/* the idle pack shivers with anticipation every few seconds */
+setInterval(() => {
+  if (!document.querySelector) return;
+  if (!$('screen-shop').classList.contains('active') || opening) return;
+  const holo = document.querySelector('.pack-holo');
+  if (!holo) return;
+  holo.classList.add('tease');
+  const r = holo.getBoundingClientRect();
+  fx.burst(r.left + r.width * (0.2 + Math.random() * 0.6), r.top + r.height * 0.25,
+           ['#f6e3b0', '#fffaf0'], 5, 3);
+  setTimeout(() => holo.classList.remove('tease'), 650);
+}, 6500);
 
 </script>
 </body>
