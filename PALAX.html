@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PALAX — Pixel Pack Ripper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PALAX — midnight arcade / synthwave CRT theme
+   ============================================================ */
+
+:root {
+  --bg: #0d0a1f;
+  --bg-deep: #07050f;
+  --panel: #1a1430;
+  --panel-hi: #251b42;
+  --panel-edge: #060410;
+  --cyan: #2de2e6;
+  --cyan-dark: #15929e;
+  --magenta: #ff3864;
+  --magenta-dark: #b3164a;
+  --yellow: #f9c80e;
+  --yellow-dark: #c98a06;
+  --violet: #7b2fbe;
+  --text: #eef2ff;
+  --c-common: #9aa5b1;
+  --c-uncommon: #56c271;
+  --c-rare: #4f9dde;
+  --c-epic: #b06ae8;
+  --c-legendary: #f9c80e;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg) 45%, #1c1038 78%, #2a1245 100%);
+  font-family: 'Press Start 2P', monospace;
+  color: var(--text);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* ---- backdrop layers ---- */
+#bgStars {
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 67% 9%, #9be8ff, transparent),
+    radial-gradient(2px 2px at 84% 26%, #fff, transparent),
+    radial-gradient(1px 1px at 35% 31%, #ffd1e0, transparent),
+    radial-gradient(1px 1px at 52% 14%, #fff, transparent),
+    radial-gradient(2px 2px at 23% 42%, #9be8ff, transparent),
+    radial-gradient(1px 1px at 78% 44%, #fff, transparent),
+    radial-gradient(1px 1px at 92% 12%, #ffd1e0, transparent),
+    radial-gradient(1px 1px at 44% 48%, #fff, transparent),
+    radial-gradient(2px 2px at 6% 30%, #fff, transparent);
+  animation: starTwinkle 3.4s ease-in-out infinite alternate;
+  z-index: -3;
+}
+@keyframes starTwinkle { from { opacity: 0.5; } to { opacity: 1; } }
+
+#gridFloor {
+  position: fixed;
+  left: -30%; right: -30%; bottom: -4%;
+  height: 46%;
+  background:
+    repeating-linear-gradient(90deg, rgba(45,226,230,0.4) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(0deg, rgba(255,56,100,0.45) 0 2px, transparent 2px 34px),
+    linear-gradient(180deg, rgba(123,47,190,0.18), rgba(13,10,31,0));
+  transform: perspective(320px) rotateX(58deg);
+  transform-origin: 50% 100%;
+  animation: gridScroll 1.4s linear infinite;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 40%);
+  mask-image: linear-gradient(180deg, transparent 0%, black 40%);
+  z-index: -2;
+}
+@keyframes gridScroll { to { background-position: 0 0, 0 34px, 0 0; } }
+
+/* CRT scanlines + vignette above the app */
+#scanlines {
+  position: fixed; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.5) 100%);
+  pointer-events: none;
+  z-index: 300;
+}
+
+#fxCanvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 200;
+}
+
+#app {
+  height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------- top HUD ---------------- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 8px;
+}
+.logo {
+  font-size: 19px;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  text-shadow:
+    0 0 8px rgba(45,226,230,0.9), 0 0 22px rgba(45,226,230,0.45),
+    3px 3px 0 rgba(0,0,0,0.9);
+  animation: logoFlicker 4.5s linear infinite;
+}
+.logo span {
+  color: var(--magenta);
+  text-shadow:
+    0 0 8px rgba(255,56,100,0.9), 0 0 22px rgba(255,56,100,0.45),
+    3px 3px 0 rgba(0,0,0,0.9);
+}
+@keyframes logoFlicker {
+  0%, 6%, 8%, 100% { opacity: 1; }
+  7% { opacity: 0.55; }
+}
+.coins-pill {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel);
+  border: 2px solid var(--cyan-dark);
+  border-radius: 4px;
+  padding: 8px 13px;
+  font-size: 12px;
+  box-shadow: 0 0 10px rgba(45,226,230,0.25), inset 0 0 12px rgba(0,0,0,0.5);
+}
+.coins-pill.bump { animation: coinBump 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes coinBump { 35% { transform: scale(1.22); } }
+.coin-icon {
+  display: inline-block;
+  width: 13px; height: 13px;
+  background: radial-gradient(circle at 35% 30%, #fff3c4, var(--yellow) 55%, var(--yellow-dark));
+  border: 2px solid var(--yellow-dark);
+  border-radius: 50%;
+  box-shadow: 0 0 9px rgba(249,200,14,0.7);
+}
+.icon-btn {
+  background: var(--panel);
+  border: 2px solid var(--cyan-dark);
+  border-radius: 4px;
+  color: var(--cyan);
+  font-size: 14px;
+  padding: 7px 11px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(45,226,230,0.2);
+}
+.icon-btn.muted { color: #4a5568; border-color: #2a3242; box-shadow: none; text-decoration: line-through; }
+
+/* ---------------- top tab bar ---------------- */
+#navbar {
+  display: flex;
+  margin: 4px 14px 8px;
+  background: var(--panel);
+  border: 2px solid var(--panel-edge);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+}
+.nav-btn {
+  flex: 1;
+  font-family: inherit;
+  font-size: 7px;
+  color: #5f6c8a;
+  background: none;
+  border: none;
+  border-right: 2px solid var(--panel-edge);
+  padding: 10px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s, background 0.2s;
+}
+.nav-btn:last-child { border-right: none; }
+.nav-ico { font-size: 12px; }
+.nav-btn.active {
+  color: var(--bg-deep);
+  background: linear-gradient(180deg, var(--cyan), var(--cyan-dark));
+  text-shadow: none;
+  box-shadow: 0 0 16px rgba(45,226,230,0.55), inset 0 2px 0 rgba(255,255,255,0.45);
+}
+.nav-btn.active .nav-ico { animation: navBounce 0.3s ease; }
+@keyframes navBounce { 50% { transform: translateY(-4px); } }
+
+/* ---------------- screens ---------------- */
+.screen {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 16px 26px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-hi) transparent;
+}
+.screen.active { display: flex; animation: screenIn 0.3s ease both; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateX(26px); }
+}
+.screen-title {
+  font-size: 14px;
+  margin: 6px 0 14px;
+  letter-spacing: 2px;
+  color: var(--magenta);
+  text-shadow: 0 0 10px rgba(255,56,100,0.8), 2px 2px 0 #000;
+}
+.subtitle {
+  font-size: 8px;
+  line-height: 1.9;
+  text-align: center;
+  color: #aab4d4;
+  margin-bottom: 14px;
+}
+
+/* ---------------- buttons ---------------- */
+.big-btn {
+  position: relative;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--bg-deep);
+  background: linear-gradient(180deg, #7df3f6, var(--cyan) 55%, var(--cyan-dark));
+  border: none;
+  border-radius: 4px;
+  padding: 14px 22px;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(45,226,230,0.4), 0 5px 0 var(--cyan-dark), inset 0 2px 0 rgba(255,255,255,0.5);
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.25);
+  transition: transform 0.06s, box-shadow 0.06s, filter 0.15s;
+}
+.big-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.big-btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 10px rgba(45,226,230,0.3), 0 1px 0 var(--cyan-dark);
+}
+.big-btn:disabled { filter: grayscale(0.85) brightness(0.55); cursor: default; }
+.gold-btn {
+  background: linear-gradient(180deg, #ffe27d, var(--yellow) 55%, var(--yellow-dark));
+  box-shadow: 0 0 16px rgba(249,200,14,0.45), 0 5px 0 var(--yellow-dark), inset 0 2px 0 rgba(255,255,255,0.5);
+}
+.gold-btn:active:not(:disabled) { box-shadow: 0 0 10px rgba(249,200,14,0.3), 0 1px 0 var(--yellow-dark); }
+.danger-btn {
+  background: linear-gradient(180deg, #ff7d9b, var(--magenta) 55%, var(--magenta-dark));
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+  box-shadow: 0 0 16px rgba(255,56,100,0.45), 0 5px 0 var(--magenta-dark), inset 0 2px 0 rgba(255,255,255,0.35);
+}
+.danger-btn:active:not(:disabled) { box-shadow: 0 0 10px rgba(255,56,100,0.3), 0 1px 0 var(--magenta-dark); }
+/* ---------------- the one pack ---------------- */
+.pack-stage {
+  width: 220px;
+  height: 290px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 700px;
+}
+.pack-holo {
+  position: relative;
+  width: 198px; height: 264px;
+  cursor: pointer;
+  transition: transform 0.18s ease;
+  transform-style: preserve-3d;
+  animation: packFloat 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 18px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 30px var(--packglow, transparent));
+}
+@keyframes packFloat {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -12px; }
+}
+.pack-holo canvas {
+  width: 100%; height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+/* CRT scan beam sweeping down the pack */
+.pack-holo::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.0) 40%, rgba(255,255,255,0.45) 50%, transparent 60%);
+  background-size: 100% 320%;
+  animation: packScan 2.6s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+@keyframes packScan {
+  from { background-position: 0 -120%; }
+  to { background-position: 0 220%; }
+}
+
+.pack-info {
+  text-align: center;
+  margin: 6px 0 12px;
+  line-height: 2.1;
+}
+.pack-info .p-name { font-size: 11px; color: var(--text); text-shadow: 2px 2px 0 #000; }
+.pack-info .p-meta { font-size: 7px; color: #aab4d4; }
+.pack-info .p-odds { font-size: 7px; }
+.buy-main { font-size: 12px; padding: 15px 38px; }
+.pity-hint { font-size: 7px; color: #6f7da0; margin-top: 18px; line-height: 2; text-align: center; }
+
+/* ---------------- pack opening overlay ---------------- */
+.overlay {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 50% 38%, rgba(30, 18, 56, 0.97), rgba(4, 3, 10, 0.99) 75%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.overlay.hidden, .hidden { display: none !important; }
+
+.open-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+}
+
+#stageRays {
+  position: absolute;
+  left: 50%; top: 44%;
+  width: 760px; height: 760px;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(
+    color-mix(in srgb, var(--raycolor, #fff) 32%, transparent) 0deg 12deg,
+    transparent 12deg 26deg);
+  -webkit-mask-image: radial-gradient(circle, black 0%, transparent 66%);
+  mask-image: radial-gradient(circle, black 0%, transparent 66%);
+  opacity: 0;
+  transition: opacity 0.7s ease;
+  animation: raySpin 18s linear infinite;
+  pointer-events: none;
+}
+#stageRays.on { opacity: 0.9; }
+@keyframes raySpin { to { rotate: 360deg; } }
+
+#shockwave {
+  position: absolute;
+  width: 60px; height: 60px;
+  border: 6px solid var(--cyan);
+  border-radius: 50%;
+  translate: -50% -50%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 20px rgba(45,226,230,0.8), inset 0 0 14px rgba(45,226,230,0.6);
+}
+#shockwave.boom { animation: shock 0.65s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+@keyframes shock {
+  from { opacity: 0.95; scale: 0.15; border-width: 14px; }
+  to   { opacity: 0; scale: 12; border-width: 1px; }
+}
+
+.rip-hint {
+  font-size: 9px;
+  color: var(--cyan);
+  text-shadow: 0 0 12px rgba(45,226,230,0.8), 2px 2px 0 #000;
+  animation: hintBob 1.2s ease-in-out infinite;
+  z-index: 4;
+}
+@keyframes hintBob { 50% { transform: translateY(-5px); } }
+
+.pack-wrap {
+  position: relative;
+  width: 240px; height: 320px;
+  touch-action: none;
+  cursor: grab;
+  z-index: 3;
+}
+.pack-wrap.idle { animation: openFloat 2.8s ease-in-out infinite; }
+@keyframes openFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+#packBody, #packFlap {
+  position: absolute;
+  left: 0; top: 0;
+  width: 240px;
+  image-rendering: pixelated;
+}
+#packBody { height: 320px; }
+#packFlap { height: 90px; z-index: 2; }
+#packFlap.flying {
+  transition: transform 0.7s cubic-bezier(0.25, 0.5, 0.3, 1), opacity 0.7s;
+  transform: translate(150px, -340px) rotate(80deg) scale(1.15) !important;
+  opacity: 0;
+}
+.pack-wrap.shaking { animation: packShake 0.08s linear infinite; }
+@keyframes packShake {
+  25% { transform: translate(-2px, 1px); }
+  75% { transform: translate(2px, -1px); }
+}
+
+body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s linear; }
+@keyframes screenShake {
+  10% { transform: translate(-7px, 5px); }
+  30% { transform: translate(6px, -6px); }
+  50% { transform: translate(-5px, 3px); }
+  70% { transform: translate(4px, -2px); }
+  90% { transform: translate(-1px, 1px); }
+}
+
+body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
+
+/* ---------------- the revealed card ---------------- */
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  perspective: 1000px;
+  min-height: 150px;
+  z-index: 3;
+}
+
+/* wrapper handles the pop-out; inner card handles the spin */
+.pop-wrap {
+  perspective: 1000px;
+  animation: popOut 0.65s cubic-bezier(0.2, 1.35, 0.4, 1) both;
+}
+@keyframes popOut {
+  from { transform: translateY(170px) scale(0.1); opacity: 0; filter: brightness(4); }
+}
+.big-reveal { width: 196px; height: 274px; }
+.big-reveal .card-name { font-size: 9px; min-height: 34px; padding: 9px 4px 2px; }
+.big-reveal .card-rarity { font-size: 8px; padding-bottom: 9px; letter-spacing: 2px; }
+
+/* white-hot mystery covers while the card spins — one per side,
+   pushed off the card plane so 3D rendering can't z-fight them */
+.mystery-cover {
+  position: absolute; inset: 0;
+  border-radius: 5px;
+  backface-visibility: hidden;
+  transform: translateZ(3px);
+  background: radial-gradient(circle at 50% 36%, #ffffff, #e2f7ff 55%, #8fd8ff 100%);
+  box-shadow:
+    0 0 30px rgba(255,255,255,0.95),
+    0 0 80px rgba(160,220,255,0.75),
+    0 0 160px rgba(120,200,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: coverPulse 0.45s ease-in-out infinite;
+  transition: opacity 0.16s ease;
+}
+.mystery-cover::after {
+  content: '?';
+  font-size: 44px;
+  color: rgba(40, 80, 140, 0.3);
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+}
+.mystery-cover.back { transform: rotateY(180deg) translateZ(3px); }
+.mystery-cover.off { opacity: 0; pointer-events: none; }
+@keyframes coverPulse { 50% { filter: brightness(1.3); } }
+.game-card {
+  width: 96px; height: 134px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.3, 1.5, 0.5, 1);
+  transform: rotateX(180deg);
+  cursor: pointer;
+}
+.game-card.spawn { animation: cardSpawn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+@keyframes cardSpawn {
+  from { transform: rotateX(180deg) translateY(180px); opacity: 0; filter: brightness(3); }
+}
+.game-card.flipped { transform: rotateX(0deg); }
+.card-face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.card-front {
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel) 60%);
+  border: 3px solid var(--panel-edge);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.card-back-face {
+  transform: rotateX(180deg);
+  background:
+    repeating-linear-gradient(45deg, #1d1538 0 8px, #140e28 8px 16px);
+  border: 3px solid var(--cyan-dark);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 22px rgba(0,0,0,0.6), 0 0 12px rgba(45,226,230,0.25);
+}
+.card-back-face::before {
+  content: '';
+  position: absolute; inset: 6px;
+  border: 2px solid rgba(45,226,230,0.45);
+  border-radius: 3px;
+}
+.card-back-face::after {
+  content: 'P';
+  font-size: 26px;
+  color: var(--cyan);
+  text-shadow: 0 0 14px rgba(45,226,230,0.9), 3px 3px 0 #000;
+}
+.card-art { width: 100%; image-rendering: pixelated; display: block; }
+.card-name {
+  font-size: 6px;
+  text-align: center;
+  padding: 4px 2px 2px;
+  line-height: 1.5;
+  min-height: 22px;
+}
+.card-rarity { font-size: 5px; padding-bottom: 4px; letter-spacing: 1px; }
+
+/* glitch-scan sweep on every flip */
+.game-card.flipped .card-front::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 30%, rgba(255,255,255,0.65) 50%, transparent 70%);
+  background-size: 100% 300%;
+  animation: revealScan 0.7s ease 0.18s both;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes revealScan {
+  from { background-position: 0 -120%; }
+  to { background-position: 0 220%; }
+}
+
+/* holo film on rare+ */
+.holo-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background:
+    linear-gradient(120deg,
+      rgba(255, 56, 100, 0.22), rgba(45, 226, 230, 0.24) 30%,
+      rgba(123, 47, 190, 0.22) 55%, rgba(249, 200, 14, 0.2) 80%,
+      rgba(255, 56, 100, 0.22));
+  background-size: 320% 320%;
+  animation: holoShift 3.6s linear infinite;
+  opacity: 0.55;
+  z-index: 1;
+}
+.r-rare .holo-overlay { opacity: 0.3; }
+.r-legendary .holo-overlay { opacity: 0.85; animation-duration: 2.2s; }
+@keyframes holoShift {
+  from { background-position: 0% 0%; }
+  to { background-position: 300% 100%; }
+}
+
+/* rarity colors + neon glows */
+.r-common    .card-rarity { color: var(--c-common); }
+.r-uncommon  .card-rarity { color: var(--c-uncommon); }
+.r-rare      .card-rarity { color: var(--c-rare); }
+.r-epic      .card-rarity { color: var(--c-epic); }
+.r-legendary .card-rarity { color: var(--c-legendary); }
+
+.r-uncommon  .card-front { border-color: #2c7544; box-shadow: 0 0 10px rgba(86,194,113,0.4); }
+.r-rare      .card-front { border-color: #2c5e8f; box-shadow: 0 0 16px rgba(79,157,222,0.65); }
+.r-epic      .card-front { border-color: #6f3e99; box-shadow: 0 0 24px rgba(176,106,232,0.8); }
+.r-legendary .card-front {
+  border-color: var(--yellow-dark);
+  animation: legendPulse 1.5s ease-in-out infinite;
+}
+@keyframes legendPulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(249,200,14,0.7); }
+  50% { box-shadow: 0 0 46px rgba(249,200,14,1), 0 0 95px rgba(249,200,14,0.5); }
+}
+
+/* reveal jolts: epic glitches, legendary erupts */
+.game-card.flipped.r-rare      { animation: rareJolt 0.45s ease; }
+.game-card.flipped.r-epic      { animation: epicGlitch 0.55s steps(2) ; }
+.game-card.flipped.r-legendary { animation: legendJolt 0.8s ease; }
+@keyframes rareJolt { 30% { transform: rotateX(0) scale(1.14); } }
+@keyframes epicGlitch {
+  10% { transform: rotateX(0) translate(-5px, 2px) skewX(6deg); filter: hue-rotate(60deg); }
+  30% { transform: rotateX(0) translate(5px, -3px) skewX(-6deg); filter: hue-rotate(-50deg); }
+  50% { transform: rotateX(0) translate(-3px, 1px) scale(1.16); filter: none; }
+  70% { transform: rotateX(0) translate(2px, -1px); }
+}
+@keyframes legendJolt {
+  15% { transform: rotateX(0) scale(1.4); filter: brightness(2); }
+  40% { transform: rotateX(0) scale(1.15) translate(-4px, 0); filter: brightness(1.2); }
+  65% { transform: rotateX(0) scale(1.28) translate(3px, 0); }
+}
+
+/* ---------------- minigame ---------------- */
+.duel-table {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin: 10px 0 18px;
+}
+.duel-card-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.duel-label { font-size: 8px; color: #aab4d4; }
+.duel-vs { font-size: 14px; color: var(--magenta); text-shadow: 0 0 12px rgba(255,56,100,0.8), 2px 2px 0 #000; }
+.duel-card {
+  width: 84px; height: 118px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #f4f6ff, #d8dcf0);
+  border: 3px solid #0a0714;
+  color: #16121f;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+}
+.duel-card.red-suit { color: var(--magenta-dark); }
+.duel-card.back {
+  background: repeating-linear-gradient(45deg, #1d1538 0 8px, #140e28 8px 16px);
+  color: transparent;
+  border-color: var(--cyan-dark);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.55), 0 0 12px rgba(45,226,230,0.3);
+}
+.duel-card.pop { animation: duelPop 0.38s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes duelPop { from { transform: scale(0.4) rotate(10deg); } }
+.pot-display { font-size: 11px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; text-shadow: 2px 2px 0 #000; }
+.streak-badge { font-size: 8px; color: var(--yellow); animation: hintBob 1s ease-in-out infinite; }
+.bet-controls { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.bet-btn {
+  font-family: inherit; font-size: 9px;
+  color: var(--bg-deep);
+  background: linear-gradient(180deg, #7df3f6, var(--cyan) 55%, var(--cyan-dark));
+  border: none; border-radius: 4px;
+  padding: 12px 14px; cursor: pointer;
+  box-shadow: 0 0 12px rgba(45,226,230,0.35), 0 4px 0 var(--cyan-dark), inset 0 2px 0 rgba(255,255,255,0.5);
+}
+.bet-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.bet-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--cyan-dark); }
+.bet-btn:disabled { filter: grayscale(0.85) brightness(0.55); }
+.duel-msg { font-size: 9px; margin-top: 16px; min-height: 16px; text-align: center; color: var(--yellow); text-shadow: 0 0 10px rgba(249,200,14,0.6), 2px 2px 0 #000; line-height: 1.8; }
+.best-streak { font-size: 8px; color: #6f7da0; margin-top: 14px; }
+
+/* ---------------- collection / trade ---------------- */
+.collection-stats { font-size: 8px; color: #aab4d4; margin-bottom: 14px; line-height: 1.9; text-align: center; }
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 96px);
+  gap: 16px;
+  justify-content: center;
+  width: 100%;
+}
+.coll-card { position: relative; }
+.coll-card .game-card { transform: none; cursor: default; }
+.coll-count {
+  position: absolute;
+  top: -7px; right: -7px;
+  background: linear-gradient(180deg, #ff7d9b, var(--magenta));
+  border: 2px solid #fff;
+  border-radius: 50%;
+  font-size: 7px;
+  min-width: 21px; height: 21px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 10px rgba(255,56,100,0.6);
+  z-index: 3;
+}
+.coll-actions { display: flex; gap: 4px; margin-top: 6px; justify-content: center; }
+.mini-btn {
+  font-family: inherit; font-size: 6px;
+  color: var(--bg-deep);
+  background: linear-gradient(180deg, #7df3f6, var(--cyan) 55%, var(--cyan-dark));
+  border: none; border-radius: 3px;
+  padding: 6px 8px; cursor: pointer;
+  box-shadow: 0 3px 0 var(--cyan-dark);
+}
+.mini-btn.sell { background: linear-gradient(180deg, #ffe27d, var(--yellow) 55%, var(--yellow-dark)); box-shadow: 0 3px 0 var(--yellow-dark); }
+.mini-btn:active { transform: translateY(2px); box-shadow: none; }
+.empty-note { font-size: 8px; color: #6f7da0; grid-column: 1 / -1; text-align: center; line-height: 2.2; padding: 34px 0; }
+
+.trade-redeem { display: flex; gap: 8px; width: 100%; max-width: 400px; margin-bottom: 8px; }
+.trade-redeem input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 8px;
+  background: var(--bg-deep);
+  border: 2px solid var(--cyan-dark);
+  border-radius: 4px;
+  color: var(--cyan);
+  padding: 10px;
+  min-width: 0;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+}
+.trade-redeem input:focus { outline: 2px solid var(--magenta); }
+.trade-redeem .big-btn { font-size: 9px; padding: 10px 14px; }
+
+/* ---------------- modal ---------------- */
+.modal-box {
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  border: 2px solid var(--cyan-dark);
+  border-radius: 6px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 0 30px rgba(45,226,230,0.25), 0 18px 40px rgba(0,0,0,0.7);
+  animation: screenIn 0.3s ease both;
+}
+.modal-box h3 { font-size: 13px; color: var(--cyan); text-shadow: 0 0 10px rgba(45,226,230,0.7), 2px 2px 0 #000; }
+.code-text {
+  font-size: 8px;
+  word-break: break-all;
+  background: var(--bg-deep);
+  padding: 12px;
+  border-radius: 4px;
+  line-height: 1.9;
+  width: 100%;
+  text-align: center;
+  color: var(--yellow);
+  border: 1px solid var(--panel-hi);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+}
+
+</style>
+</head>
+<body>
+
+<!-- synthwave backdrop layers -->
+<div id="bgStars"></div>
+<div id="gridFloor"></div>
+
+<!-- particle / FX layer -->
+<canvas id="fxCanvas"></canvas>
+
+<!-- CRT scanlines on top of everything -->
+<div id="scanlines"></div>
+
+<div id="app">
+
+  <!-- top HUD -->
+  <header id="topbar">
+    <div class="logo">PALA<span>X</span></div>
+    <div class="coins-pill" id="coinsPill">
+      <span class="coin-icon"></span><span id="coinCount">0</span>
+    </div>
+    <button id="muteBtn" class="icon-btn" title="Toggle sound">&#9835;</button>
+  </header>
+
+  <!-- top tab bar -->
+  <nav id="navbar">
+    <button class="nav-btn active" data-screen="shop"><span class="nav-ico">&#9646;</span>SHOP</button>
+    <button class="nav-btn" data-screen="game"><span class="nav-ico">&#9830;</span>GAMBLE</button>
+    <button class="nav-btn" data-screen="collection"><span class="nav-ico">&#9733;</span>CARDS</button>
+    <button class="nav-btn" data-screen="trade"><span class="nav-ico">&#8644;</span>TRADE</button>
+  </nav>
+
+  <!-- ============ SHOP SCREEN: the one pack ============ -->
+  <section id="screen-shop" class="screen active">
+    <div id="packStage" class="pack-stage"></div>
+    <div id="packInfo" class="pack-info"></div>
+    <button id="buyBtn" class="big-btn buy-main">RIP IT</button>
+    <div class="pity-hint" id="pityHint"></div>
+  </section>
+
+  <!-- ============ MINIGAME SCREEN ============ -->
+  <section id="screen-game" class="screen">
+    <h2 class="screen-title">DOUBLE OR NOTHING</h2>
+    <p class="subtitle">Flip higher than the dealer. Win = pot doubles.<br>Push your luck... or lose it all.</p>
+    <div class="duel-table">
+      <div class="duel-card-slot"><div class="duel-label">DEALER</div><div id="dealerCard" class="duel-card back"></div></div>
+      <div class="duel-vs">VS</div>
+      <div class="duel-card-slot"><div class="duel-label">YOU</div><div id="playerCard" class="duel-card back"></div></div>
+    </div>
+    <div class="pot-display">POT: <span id="potAmount">0</span> <span class="coin-icon"></span> <span id="streakBadge" class="streak-badge"></span></div>
+    <div id="betControls" class="bet-controls">
+      <button class="bet-btn" data-bet="10">BET 10</button>
+      <button class="bet-btn" data-bet="25">BET 25</button>
+      <button class="bet-btn" data-bet="50">BET 50</button>
+    </div>
+    <div id="duelControls" class="bet-controls hidden">
+      <button id="flipAgainBtn" class="big-btn danger-btn">FLIP AGAIN</button>
+      <button id="cashOutBtn" class="big-btn gold-btn">CASH OUT</button>
+    </div>
+    <div id="duelMsg" class="duel-msg"></div>
+    <div class="best-streak">BEST STREAK: <span id="bestStreak">0</span></div>
+  </section>
+
+  <!-- ============ COLLECTION SCREEN ============ -->
+  <section id="screen-collection" class="screen">
+    <h2 class="screen-title">COLLECTION</h2>
+    <div class="collection-stats" id="collectionStats"></div>
+    <div id="collectionGrid" class="collection-grid"></div>
+  </section>
+
+  <!-- ============ TRADE SCREEN ============ -->
+  <section id="screen-trade" class="screen">
+    <h2 class="screen-title">TRADING POST</h2>
+    <p class="subtitle">Gift a card: pick one below to generate a code.<br>The card leaves your collection — send the code to a friend!</p>
+    <div class="trade-redeem">
+      <input id="redeemInput" type="text" placeholder="PASTE CODE HERE" autocomplete="off">
+      <button id="redeemBtn" class="big-btn">REDEEM</button>
+    </div>
+    <div id="tradeMsg" class="duel-msg"></div>
+    <div id="tradeGrid" class="collection-grid"></div>
+  </section>
+
+</div>
+
+<!-- ============ PACK OPENING OVERLAY ============ -->
+<div id="openOverlay" class="overlay hidden">
+  <div class="open-stage" id="openStage">
+    <div id="stageRays"></div>
+    <div id="shockwave"></div>
+    <div class="rip-hint" id="ripHint">&#9756; SWIPE ACROSS THE TOP TO RIP &#9758;</div>
+    <div id="packWrap" class="pack-wrap">
+      <canvas id="packFlap" width="48" height="18"></canvas>
+      <canvas id="packBody" width="48" height="64"></canvas>
+    </div>
+    <div id="cardRow" class="card-row"></div>
+    <button id="doneBtn" class="big-btn gold-btn hidden">COLLECT</button>
+  </div>
+</div>
+
+<!-- ============ TRADE CODE MODAL ============ -->
+<div id="codeModal" class="overlay hidden">
+  <div class="modal-box">
+    <h3>GIFT CODE</h3>
+    <p class="subtitle">Card removed from your collection.<br>Send this code to a friend:</p>
+    <div id="codeText" class="code-text"></div>
+    <button id="copyCodeBtn" class="big-btn">COPY CODE</button>
+    <button id="closeCodeBtn" class="big-btn danger-btn">CLOSE</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   PALAX audio engine — 100% procedural Web Audio.
+   Chiptune theme song + pack rip / card reveal sound design.
+   ============================================================ */
+
+const AudioEngine = (() => {
+  let ctx = null;
+  let master = null;
+  let musicGain = null;
+  let muted = false;
+  let themeTimer = null;
+
+  function init() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain();
+    master.gain.value = muted ? 0 : 0.5;
+    master.connect(ctx.destination);
+    musicGain = ctx.createGain();
+    musicGain.gain.value = 0.32;
+    musicGain.connect(master);
+    startTheme();
+  }
+
+  function resume() {
+    init();
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+
+  function setMuted(m) {
+    muted = m;
+    if (master) master.gain.value = m ? 0 : 0.5;
+  }
+
+  const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+
+  /* ---------- generic voice ---------- */
+  function tone({ type = 'square', freq = 440, time = 0, dur = 0.15, vol = 0.2,
+                  attack = 0.005, slide = 0, dest = null }) {
+    const t = ctx.currentTime + time;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g).connect(dest || master);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+
+  function noise({ time = 0, dur = 0.2, vol = 0.2, freq = 1500, q = 1, slide = 0, dest = null }) {
+    const t = ctx.currentTime + time;
+    const len = Math.ceil(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(freq, t);
+    if (slide) f.frequency.exponentialRampToValueAtTime(Math.max(60, freq + slide), t + dur);
+    f.Q.value = q;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f).connect(g).connect(dest || master);
+    src.start(t);
+  }
+
+  /* ---------- sound effects ---------- */
+  const sfx = {
+    // progressive tearing — pitch rises as the rip travels
+    rip(progress) {
+      resume();
+      noise({ dur: 0.07, vol: 0.32, freq: 900 + progress * 2600, q: 2.5, slide: 600 });
+    },
+    // the flap blows off — noise blast + sub boom + sparkle tail
+    burst() {
+      resume();
+      noise({ dur: 0.5, vol: 0.55, freq: 3800, q: 0.7, slide: -3400 });
+      tone({ type: 'square', freq: 180, dur: 0.3, vol: 0.25, slide: -120 });
+      tone({ type: 'sawtooth', freq: 90, dur: 0.45, vol: 0.32, slide: -60 });
+      tone({ type: 'sine', freq: 55, dur: 0.55, vol: 0.55, slide: -25 });
+      for (let i = 0; i < 5; i++)
+        tone({ type: 'sine', freq: midi(96 + (i * 5) % 12), time: 0.12 + i * 0.05, dur: 0.18, vol: 0.07 });
+    },
+    // suspense build while the mystery card spins
+    riser(dur = 2.4) {
+      resume();
+      tone({ type: 'sawtooth', freq: 70, dur, vol: 0.13, slide: 580 });
+      noise({ dur, vol: 0.13, freq: 500, q: 1.3, slide: 3800 });
+      let at = 0, gap = 0.24;
+      for (let i = 0; i < 16 && at < dur - 0.15; i++) {
+        tone({ type: 'square', freq: midi(70 + i), time: at, dur: 0.05, vol: 0.09 });
+        at += gap; gap *= 0.87;
+      }
+    },
+    cardSlide(i) {
+      resume();
+      tone({ type: 'triangle', freq: 500 + i * 90, dur: 0.1, vol: 0.18, slide: 220 });
+      noise({ time: 0.01, dur: 0.06, vol: 0.1, freq: 4000 });
+    },
+    flip() {
+      resume();
+      noise({ dur: 0.08, vol: 0.18, freq: 2800, q: 1.5, slide: 1500 });
+    },
+    coin() {
+      resume();
+      tone({ type: 'square', freq: midi(88), dur: 0.07, vol: 0.16 });
+      tone({ type: 'square', freq: midi(93), time: 0.07, dur: 0.18, vol: 0.16 });
+    },
+    buy() {
+      resume();
+      tone({ type: 'square', freq: midi(72), dur: 0.08, vol: 0.18 });
+      tone({ type: 'square', freq: midi(79), time: 0.08, dur: 0.12, vol: 0.18 });
+    },
+    deny() {
+      resume();
+      tone({ type: 'square', freq: midi(46), dur: 0.15, vol: 0.2 });
+      tone({ type: 'square', freq: midi(44), time: 0.13, dur: 0.25, vol: 0.2 });
+    },
+    win() {
+      resume();
+      [72, 76, 79, 84].forEach((n, i) =>
+        tone({ type: 'square', freq: midi(n), time: i * 0.07, dur: 0.14, vol: 0.18 }));
+    },
+    lose() {
+      resume();
+      [64, 60, 55, 48].forEach((n, i) =>
+        tone({ type: 'sawtooth', freq: midi(n), time: i * 0.1, dur: 0.2, vol: 0.16 }));
+    },
+    // rarity reveal stingers — escalate hard
+    reveal(rarity) {
+      resume();
+      const runs = {
+        common:    [[60, 64]],
+        uncommon:  [[62, 66, 69]],
+        rare:      [[64, 68, 71, 76]],
+        epic:      [[65, 69, 72, 77, 81]],
+        legendary: [[67, 71, 74, 79, 83, 86, 91]],
+      };
+      const notes = runs[rarity][0];
+      notes.forEach((n, i) => {
+        tone({ type: 'square', freq: midi(n), time: i * 0.07, dur: 0.16, vol: 0.2 });
+        if (rarity === 'epic' || rarity === 'legendary')
+          tone({ type: 'triangle', freq: midi(n - 12), time: i * 0.07, dur: 0.2, vol: 0.16 });
+      });
+      if (rarity === 'legendary') {
+        noise({ dur: 0.8, vol: 0.25, freq: 6000, q: 0.5, slide: -4500 });
+        tone({ type: 'sawtooth', freq: midi(43), time: 0.1, dur: 0.9, vol: 0.22 });
+        // shimmering tail
+        for (let i = 0; i < 6; i++)
+          tone({ type: 'sine', freq: midi(91 + (i % 3) * 4), time: 0.5 + i * 0.09, dur: 0.25, vol: 0.08 });
+      }
+    },
+  };
+
+  /* ---------- theme song ----------
+     A looping synthwave cruise in A minor — four-on-the-floor kick,
+     driving octave sawtooth bass, sustained neon pads and a sparse
+     dreamy lead. 16 steps per bar over Am / F / C / G.          */
+  const BPM = 100;
+  const STEP = 60 / BPM / 4;          // 16th note
+  const BARS = 4;
+  const N = BARS * 16;
+
+  // sparse, floaty lead (midi or 0 = rest)
+  const lead = [
+    81,0,0,0, 76,0,0,0, 79,0,0,76, 0,0,74,0,
+    77,0,0,0, 72,0,0,0, 76,0,0,72, 0,0,69,0,
+    72,0,0,0, 76,0,0,0, 79,0,0,81, 0,0,84,0,
+    79,0,0,0, 74,0,0,0, 71,0,0,74, 0,0,76,0,
+  ];
+  const bassRoots = [45, 41, 36, 43];                  // A2 F2 C2 G2 per bar
+  const padChords = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]];
+
+  let step = 0, nextTime = 0;
+
+  function scheduleStep(s, t) {
+    const when = t - ctx.currentTime;
+    const bar = Math.floor(s / 16);
+    // driving octave bass on every 8th note
+    if (s % 2 === 0) {
+      const oct = (s % 4 === 2) ? 12 : 0;
+      tone({ type: 'sawtooth', freq: midi(bassRoots[bar] + oct), time: when, dur: STEP * 1.7, vol: 0.22, dest: musicGain });
+    }
+    // sustained pad at the top of each bar (slightly detuned pair)
+    if (s % 16 === 0) {
+      padChords[bar].forEach(n => {
+        tone({ type: 'sawtooth', freq: midi(n), time: when, dur: STEP * 15, vol: 0.03, attack: 0.4, dest: musicGain });
+        tone({ type: 'triangle', freq: midi(n) * 1.004, time: when, dur: STEP * 15, vol: 0.035, attack: 0.4, dest: musicGain });
+      });
+    }
+    // dreamy lead with a soft echo
+    if (lead[s]) {
+      tone({ type: 'square', freq: midi(lead[s]), time: when, dur: STEP * 3.2, vol: 0.12, attack: 0.02, dest: musicGain });
+      tone({ type: 'square', freq: midi(lead[s]), time: when + STEP * 3, dur: STEP * 2.2, vol: 0.045, attack: 0.02, dest: musicGain });
+    }
+    if (s % 4 === 0) tone({ type: 'sine', freq: 100, time: when, dur: 0.13, vol: 0.42, slide: -60, dest: musicGain }); // 4-on-floor kick
+    if (s % 8 === 4) noise({ time: when, dur: 0.16, vol: 0.16, freq: 1700, q: 0.7, dest: musicGain });                 // snare 2 & 4
+    if (s % 4 === 2) noise({ time: when, dur: 0.04, vol: 0.08, freq: 8000, dest: musicGain });                          // offbeat hat
+  }
+
+  function startTheme() {
+    if (themeTimer) return;
+    nextTime = ctx.currentTime + 0.1;
+    themeTimer = setInterval(() => {
+      while (nextTime < ctx.currentTime + 0.15) {
+        scheduleStep(step, nextTime);
+        step = (step + 1) % N;
+        nextTime += STEP;
+      }
+    }, 30);
+  }
+
+  return { resume, setMuted, sfx, get muted() { return muted; } };
+})();
+
+;
+/* ============================================================
+   PALAX cards — rarities, procedural names and pixel art.
+   Every card is generated from a seed, so trade codes can
+   reconstruct the exact same card on another device.
+   ============================================================ */
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const RARITIES = {
+  common:    { label: 'COMMON',    weight: 0,  sell: 5,   color: '#9aa5b1',
+               palette: ['#cfd6dd', '#9aa5b1', '#6c7686', '#414a57'] },
+  uncommon:  { label: 'UNCOMMON',  weight: 0,  sell: 15,  color: '#56c271',
+               palette: ['#b8f0c4', '#56c271', '#2e8c4a', '#1b5230'] },
+  rare:      { label: 'RARE',      weight: 0,  sell: 40,  color: '#4f9dde',
+               palette: ['#bfe0ff', '#4f9dde', '#2c6da3', '#1a3f63'] },
+  epic:      { label: 'EPIC',      weight: 0,  sell: 100, color: '#b06ae8',
+               palette: ['#e8c8ff', '#b06ae8', '#7d3cb5', '#4a1d73'] },
+  legendary: { label: 'LEGENDARY', weight: 0,  sell: 300, color: '#f5b83d',
+               palette: ['#ffe9a8', '#f5b83d', '#d4881f', '#8a4d0f'] },
+};
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+const NAME_A = ['NEON', 'GLITCH', 'COSMIC', 'WILD', 'LUCKY', 'ROYAL', 'CURSED', 'TURBO',
+                'GOLDEN', 'SHADOW', 'PIXEL', 'ARCANE', 'STATIC', 'MIDNIGHT', 'BLAZING', 'FROZEN'];
+const NAME_B = ['JOKER', 'JESTER', 'WIZARD', 'GHOST', 'BANDIT', 'ORACLE', 'KNIGHT', 'IMP',
+                'SPHINX', 'GAMBLER', 'PHANTOM', 'DEALER', 'TRICKSTER', 'BARON', 'WITCH', 'FOOL'];
+
+function cardFromSeed(seed, rarity) {
+  const rnd = mulberry32(seed);
+  const name = NAME_A[Math.floor(rnd() * NAME_A.length)] + ' ' +
+               NAME_B[Math.floor(rnd() * NAME_B.length)];
+  return { seed, rarity, name };
+}
+
+/* Draw a card's pixel art onto a canvas (logical 48x48 art panel).
+   Each card is a tiny synthwave scene: night sky, rarity-colored
+   sun on the horizon, perspective grid, creature in silhouette-glow. */
+function drawCardArt(canvas, card) {
+  const S = 48, HORIZON = 30;
+  canvas.width = S;
+  canvas.height = S;
+  const ctx = canvas.getContext('2d');
+  const pal = RARITIES[card.rarity].palette;
+  const rnd = mulberry32(card.seed ^ 0x9E3779B9);
+
+  // night sky gradient
+  for (let y = 0; y < S; y++) {
+    ctx.fillStyle = y < 10 ? '#07050f' : (y < 20 ? '#0d0a1f' : (y < HORIZON ? pal[3] : '#0a0714'));
+    ctx.fillRect(0, y, S, 1);
+  }
+  // stars
+  for (let i = 0; i < 16; i++) {
+    ctx.fillStyle = rnd() < 0.6 ? '#ffffff' : pal[0];
+    ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * (HORIZON - 4)), 1, 1);
+  }
+  // striped sun rising behind the horizon
+  const cx = 24, r = 10;
+  for (let dy = -r; dy <= 0; dy++) {
+    const y = HORIZON + dy;
+    if ((dy > -5) && (dy % 2 === 0)) continue;   // synth-sun gap stripes
+    const half = Math.floor(Math.sqrt(r * r - dy * dy));
+    ctx.fillStyle = dy < -6 ? pal[0] : pal[1];
+    ctx.fillRect(cx - half, y, half * 2, 1);
+  }
+  // glowing horizon line
+  ctx.fillStyle = pal[0];
+  ctx.fillRect(0, HORIZON, S, 1);
+  // perspective grid floor
+  ctx.fillStyle = pal[2];
+  [33, 37, 42].forEach(y => ctx.fillRect(0, y, S, 1));
+  for (let i = -2; i <= 2; i++) {
+    for (let y = HORIZON + 1; y < S; y++) {
+      const x = 24 + i * (y - HORIZON);
+      if (x >= 0 && x < S) ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  // sparkle field for epic+
+  if (card.rarity === 'epic' || card.rarity === 'legendary') {
+    for (let i = 0; i < 18; i++) {
+      ctx.fillStyle = rnd() < 0.5 ? pal[0] : '#ffffff';
+      ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 1, 1);
+    }
+  }
+
+  // mirrored creature sprite, 14x14 cells at 2x scale, centered
+  const G = 14, scale = 2;
+  const off = Math.floor((S - G * scale) / 2);
+  const srnd = mulberry32(card.seed);
+  // dark halo behind the creature so it pops off the scene
+  ctx.fillStyle = 'rgba(5,3,12,0.75)';
+  ctx.fillRect(off - 2, off - 2, G * scale + 4, G * scale + 4);
+  for (let y = 0; y < G; y++) {
+    for (let x = 0; x < Math.ceil(G / 2); x++) {
+      if (srnd() < 0.46) {
+        ctx.fillStyle = pal[Math.floor(srnd() * 3)];
+        ctx.fillRect(off + x * scale, off + y * scale, scale, scale);
+        ctx.fillRect(off + (G - 1 - x) * scale, off + y * scale, scale, scale);
+      }
+    }
+  }
+  // eyes — always symmetric, always glowing
+  const ey = off + 8, ex = off + 8;
+  ctx.fillStyle = card.rarity === 'legendary' ? '#fff7d6' : '#ffffff';
+  ctx.fillRect(ex, ey, 2, 2);
+  ctx.fillRect(S - ex - 2, ey, 2, 2);
+
+  // neon corner brackets instead of a full frame
+  ctx.fillStyle = pal[1];
+  const B = 6;
+  ctx.fillRect(0, 0, B, 1);         ctx.fillRect(S - B, 0, B, 1);
+  ctx.fillRect(0, S - 1, B, 1);     ctx.fillRect(S - B, S - 1, B, 1);
+  ctx.fillRect(0, 0, 1, B);         ctx.fillRect(S - 1, 0, 1, B);
+  ctx.fillRect(0, S - B, 1, B);     ctx.fillRect(S - 1, S - B, 1, B);
+}
+
+/* Build a DOM element for a card (used in reveal + collection). */
+function buildCardEl(card, { faceUp = false } = {}) {
+  const el = document.createElement('div');
+  el.className = `game-card r-${card.rarity}` + (faceUp ? ' flipped' : '');
+  const front = document.createElement('div');
+  front.className = 'card-face card-front';
+  const art = document.createElement('canvas');
+  art.className = 'card-art';
+  drawCardArt(art, card);
+  const name = document.createElement('div');
+  name.className = 'card-name';
+  name.textContent = card.name;
+  const rar = document.createElement('div');
+  rar.className = 'card-rarity';
+  rar.textContent = RARITIES[card.rarity].label;
+  front.append(art, name, rar);
+  if (RARITY_ORDER.indexOf(card.rarity) >= 2) {
+    const holo = document.createElement('div');
+    holo.className = 'holo-overlay';
+    front.appendChild(holo);
+  }
+  const back = document.createElement('div');
+  back.className = 'card-face card-back-face';
+  el.append(front, back);
+  return el;
+}
+
+/* ============================================================
+   Pack art — drawn at 48x64 logical pixels, split into a flap
+   (top, torn off) and body so the rip can separate them.
+   ============================================================ */
+
+const PACK_W = 48, PACK_H = 64, TEAR_Y = 12;
+
+/* jagged tear line, one y-offset per column */
+function makeTearLine(seedRnd) {
+  const line = [];
+  for (let x = 0; x < PACK_W; x++)
+    line.push(TEAR_Y + Math.floor(seedRnd() * 4) - 2);
+  return line;
+}
+
+/* Full wrapper art on an offscreen canvas.
+   New design: matte-black cyber foil with a neon frame, a glowing
+   emblem window, circuit traces, chevrons and a glyph label strip. */
+function drawPackArt(pack) {
+  const c = document.createElement('canvas');
+  c.width = PACK_W; c.height = PACK_H;
+  const ctx = c.getContext('2d');
+  const [c0, c1, c2, c3] = pack.colors;
+
+  // matte dark body
+  ctx.fillStyle = '#15101f';
+  ctx.fillRect(0, 0, PACK_W, PACK_H);
+  // subtle vertical shading
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(3, 0, 8, PACK_H);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(PACK_W - 10, 0, 10, PACK_H);
+
+  // crimp zigzag top + bottom
+  for (let x = 0; x < PACK_W; x += 2) {
+    ctx.fillStyle = c3; ctx.fillRect(x, 0, 1, 4);
+    ctx.fillStyle = '#0a0714'; ctx.fillRect(x + 1, 0, 1, 4);
+    ctx.fillStyle = c3; ctx.fillRect(x + 1, PACK_H - 4, 1, 4);
+    ctx.fillStyle = '#0a0714'; ctx.fillRect(x, PACK_H - 4, 1, 4);
+  }
+  ctx.fillStyle = c1;
+  ctx.fillRect(0, 4, PACK_W, 1);
+  ctx.fillRect(0, PACK_H - 5, PACK_W, 1);
+
+  // neon frame inset
+  ctx.fillStyle = c1;
+  ctx.fillRect(2, 7, PACK_W - 4, 1);
+  ctx.fillRect(2, PACK_H - 8, PACK_W - 4, 1);
+  ctx.fillRect(2, 7, 1, PACK_H - 15);
+  ctx.fillRect(PACK_W - 3, 7, 1, PACK_H - 15);
+  // bright frame corners
+  ctx.fillStyle = c0;
+  [[2, 7], [PACK_W - 4, 7], [2, PACK_H - 9], [PACK_W - 4, PACK_H - 9]].forEach(([x, y]) =>
+    ctx.fillRect(x, y, 2, 2));
+
+  // emblem window — glowing diamond core
+  ctx.fillStyle = '#0a0714';
+  ctx.fillRect(14, 12, 20, 20);
+  ctx.fillStyle = c2;
+  ctx.fillRect(14, 12, 20, 1); ctx.fillRect(14, 31, 20, 1);
+  ctx.fillRect(14, 12, 1, 20); ctx.fillRect(33, 12, 1, 20);
+  // diamond
+  for (let dy = -6; dy <= 6; dy++) {
+    const half = 6 - Math.abs(dy);
+    ctx.fillStyle = c1;
+    ctx.fillRect(24 - half, 22 + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -3; dy <= 3; dy++) {
+    const half = 3 - Math.abs(dy);
+    ctx.fillStyle = c0;
+    ctx.fillRect(24 - half, 22 + dy, half * 2 || 1, 1);
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(23, 21, 2, 2);
+
+  // circuit traces from the window to the frame
+  ctx.fillStyle = c2;
+  ctx.fillRect(4, 21, 10, 1); ctx.fillRect(34, 21, 10, 1);
+  ctx.fillRect(4, 25, 6, 1);  ctx.fillRect(38, 25, 6, 1);
+  ctx.fillStyle = c0;
+  [[4, 21], [43, 21], [4, 25], [43, 25]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+
+  // chevron band
+  for (let x = 4; x < PACK_W - 4; x++) {
+    const y = 40 + Math.floor(3 * Math.abs(((x - 4) / 5) % 2 - 1));
+    ctx.fillStyle = c1; ctx.fillRect(x, y, 1, 2);
+    ctx.fillStyle = c3; ctx.fillRect(x, y + 2, 1, 1);
+  }
+
+  // glyph label strip
+  ctx.fillStyle = '#0a0714';
+  ctx.fillRect(7, 49, PACK_W - 14, 9);
+  ctx.fillStyle = c2;
+  ctx.fillRect(7, 49, PACK_W - 14, 1);
+  ctx.fillStyle = '#eef2ff';
+  for (let i = 0; i < 5; i++) ctx.fillRect(11 + i * 6, 51, 4, 5);
+  ctx.fillStyle = c1;
+  for (let i = 0; i < 5; i++) ctx.fillRect(12 + i * 6, 53, 2, 2);
+
+  // scanline texture over everything
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  for (let y = 0; y < PACK_H; y += 3) ctx.fillRect(0, y, PACK_W, 1);
+
+  // glints
+  ctx.fillStyle = '#ffffff';
+  [[8, 10], [40, 15], [11, 44], [37, 57]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+
+  return c;
+}
+
+/* split the art into flap + body canvases along a jagged tear line */
+function renderPackCanvases(pack, flapCanvas, bodyCanvas, tearLine) {
+  const art = drawPackArt(pack);
+  const actx = art.getContext('2d');
+  const fctx = flapCanvas.getContext('2d');
+  const bctx = bodyCanvas.getContext('2d');
+  fctx.clearRect(0, 0, flapCanvas.width, flapCanvas.height);
+  bctx.clearRect(0, 0, bodyCanvas.width, bodyCanvas.height);
+  const img = actx.getImageData(0, 0, PACK_W, PACK_H);
+  const flapImg = fctx.createImageData(PACK_W, flapCanvas.height);
+  const bodyImg = bctx.createImageData(PACK_W, PACK_H);
+  for (let x = 0; x < PACK_W; x++) {
+    const cut = tearLine[x];
+    for (let y = 0; y < PACK_H; y++) {
+      const si = (y * PACK_W + x) * 4;
+      const target = y <= cut ? flapImg : bodyImg;
+      if (y <= cut && y >= flapCanvas.height) continue;
+      const di = (y * PACK_W + x) * 4;
+      target.data[di] = img.data[si];
+      target.data[di + 1] = img.data[si + 1];
+      target.data[di + 2] = img.data[si + 2];
+      target.data[di + 3] = img.data[si + 3];
+    }
+  }
+  fctx.putImageData(flapImg, 0, 0);
+  bctx.putImageData(bodyImg, 0, 0);
+}
+
+/* draw the bright torn-foil edge as the rip progresses (0..1) */
+function drawTearProgress(pack, bodyCanvas, tearLine, progress) {
+  const bctx = bodyCanvas.getContext('2d');
+  const upto = Math.floor(progress * PACK_W);
+  for (let x = 0; x < upto; x++) {
+    bctx.fillStyle = '#ffffff';
+    bctx.fillRect(x, tearLine[x] + 1, 1, 1);
+    bctx.fillStyle = pack.colors[0];
+    if (x % 3 === 0) bctx.fillRect(x, tearLine[x] + 2, 1, 1);
+  }
+}
+
+;
+/* ============================================================
+   PALAX — main game logic.
+   ============================================================ */
+
+/* ---------------- pack catalogue ---------------- */
+const PACKS = {
+  palax: {
+    id: 'palax', name: 'PALAX PACK', cost: 0, cards: 1,
+    colors: ['#9ff0f2', '#2de2e6', '#15929e', '#0a3b4a'],
+    odds: { common: 44, uncommon: 28, rare: 17, epic: 8, legendary: 3 },
+  },
+};
+const PACK_LIST = Object.values(PACKS);
+
+const PITY_RARE = 5;                       // guaranteed rare+ every N packs
+const PITY_LEGENDARY = 25;                 // guaranteed legendary every N packs
+
+/* ---------------- state ---------------- */
+const SAVE_KEY = 'palax-save-v1';
+let state = {
+  coins: 75,
+  opened: 0,
+  sinceRare: 0,
+  sinceLegendary: 0,
+  lastFreePack: 0,
+  bestStreak: 0,
+  muted: false,
+  collection: [],   // [{seed, rarity, name, count}]
+};
+
+function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) state = Object.assign(state, JSON.parse(raw));
+  } catch (e) { /* fresh start */ }
+}
+
+const $ = id => document.getElementById(id);
+
+/* ---------------- coins: you are infinitely rich ---------------- */
+function setCoins() {
+  $('coinCount').textContent = '∞';
+  const pill = $('coinsPill');
+  pill.classList.remove('bump');
+  void pill.offsetWidth;
+  pill.classList.add('bump');
+  save();
+}
+
+/* ---------------- collection helpers ---------------- */
+function addCard(card) {
+  const found = state.collection.find(c => c.seed === card.seed && c.rarity === card.rarity);
+  if (found) found.count++;
+  else state.collection.push({ seed: card.seed, rarity: card.rarity, name: card.name, count: 1 });
+  save();
+}
+
+function removeCard(entry) {
+  entry.count--;
+  if (entry.count <= 0) state.collection = state.collection.filter(c => c !== entry);
+  save();
+}
+
+/* ---------------- rarity rolls (with pity) ---------------- */
+function rollRarity(odds) {
+  const total = Object.values(odds).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const k of RARITY_ORDER) {
+    r -= odds[k];
+    if (r < 0) return k;
+  }
+  return 'common';
+}
+
+function rollPack(pack) {
+  const cards = [];
+  for (let i = 0; i < pack.cards; i++)
+    cards.push(cardFromSeed((Math.random() * 0xffffffff) >>> 0, rollRarity(pack.odds)));
+
+  // pity: best card of the pack gets upgraded if streaks run dry
+  state.opened++; state.sinceRare++; state.sinceLegendary++;
+  const rank = c => RARITY_ORDER.indexOf(c.rarity);
+  const best = cards.reduce((a, b) => rank(a) >= rank(b) ? a : b);
+  if (state.sinceLegendary >= PITY_LEGENDARY && best.rarity !== 'legendary')
+    best.rarity = 'legendary';
+  else if (state.sinceRare >= PITY_RARE && rank(best) < 2)
+    best.rarity = 'rare';
+  if (cards.some(c => rank(c) >= 2)) state.sinceRare = 0;
+  if (cards.some(c => c.rarity === 'legendary')) state.sinceLegendary = 0;
+  save();
+  return cards;
+}
+
+/* ============================================================
+   FX layer — particles, confetti, screen shake, flash
+   ============================================================ */
+const fx = (() => {
+  const canvas = $('fxCanvas');
+  const ctx = canvas.getContext('2d');
+  let parts = [];
+
+  function resize() {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  function burst(x, y, colors, n = 24, power = 6) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = (0.3 + Math.random()) * power;
+      parts.push({
+        x, y,
+        vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2,
+        life: 1, decay: 0.012 + Math.random() * 0.02,
+        size: 3 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        spin: (Math.random() - 0.5) * 0.3, rot: Math.random() * Math.PI,
+      });
+    }
+  }
+
+  function confetti() {
+    for (let i = 0; i < 110; i++) {
+      parts.push({
+        x: Math.random() * canvas.width, y: -10 - Math.random() * 150,
+        vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3,
+        life: 1, decay: 0.004 + Math.random() * 0.004,
+        size: 4 + Math.random() * 5,
+        color: ['#f5b83d', '#fe5f55', '#4f9dde', '#56c271', '#b06ae8', '#ffffff'][i % 6],
+        spin: (Math.random() - 0.5) * 0.4, rot: Math.random() * Math.PI,
+      });
+    }
+  }
+
+  // gentle rising sparkles while a scene is "live" (e.g. pack opening)
+  let ambient = null;   // {rectFn, colors}
+  function setAmbient(a) { ambient = a; }
+
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (ambient && Math.random() < 0.22) {
+      const r = ambient.rectFn();
+      parts.push({
+        x: r.left + Math.random() * r.width,
+        y: r.top + r.height * (0.3 + Math.random() * 0.7),
+        vx: (Math.random() - 0.5) * 0.4, vy: -(0.4 + Math.random() * 0.8),
+        life: 1, decay: 0.007 + Math.random() * 0.008,
+        size: 2 + Math.random() * 3,
+        color: ambient.colors[Math.floor(Math.random() * ambient.colors.length)],
+        spin: 0, rot: Math.PI / 4, float: true, twinkle: true,
+      });
+    }
+    parts = parts.filter(p => p.life > 0);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy;
+      if (!p.float) p.vy += 0.18;
+      p.life -= p.decay; p.rot += p.spin;
+      ctx.save();
+      const a = p.twinkle ? p.life * (0.55 + 0.45 * Math.sin(p.life * 40)) : p.life;
+      ctx.globalAlpha = Math.max(0, Math.min(1, a));
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  function shake() {
+    document.body.classList.remove('screenshake');
+    void document.body.offsetWidth;
+    document.body.classList.add('screenshake');
+  }
+  function flash() {
+    document.body.classList.add('flashwhite');
+    setTimeout(() => document.body.classList.remove('flashwhite'), 180);
+  }
+
+  return { burst, confetti, shake, flash, setAmbient };
+})();
+
+/* ============================================================
+   Shop
+   ============================================================ */
+
+/* 3D tilt that follows the pointer */
+function addTilt(el, max = 14) {
+  el.addEventListener('pointermove', e => {
+    const r = el.getBoundingClientRect();
+    const dx = (e.clientX - r.left) / r.width - 0.5;
+    const dy = (e.clientY - r.top) / r.height - 0.5;
+    el.style.animation = 'none';
+    el.style.transform =
+      `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.1)`;
+  });
+  el.addEventListener('pointerleave', () => {
+    el.style.transform = '';
+    el.style.animation = '';
+  });
+}
+
+function buildShop() {
+  const pack = PACK_LIST[0];
+  const stage = $('packStage');
+  stage.innerHTML = '';
+  const holo = document.createElement('div');
+  holo.className = 'pack-holo';
+  holo.style.setProperty('--packglow', pack.colors[1] + '99');
+  holo.appendChild(drawPackArt(pack));
+  addTilt(holo);
+  holo.addEventListener('click', ripCurrent);
+  stage.appendChild(holo);
+
+  const oddsLine = RARITY_ORDER.map(r =>
+    `<span style="color:${RARITIES[r].color}">${RARITIES[r].label} ${pack.odds[r]}%</span>`).join(' · ');
+  $('packInfo').innerHTML =
+    `<div class="p-name">${pack.name}</div>` +
+    `<div class="p-meta">1 MYSTERY CARD INSIDE</div>` +
+    `<div class="p-odds">${oddsLine}</div>`;
+
+  $('pityHint').innerHTML =
+    `PITY: RARE+ GUARANTEED EVERY ${PITY_RARE} PACKS &middot; LEGENDARY EVERY ${PITY_LEGENDARY}<br>` +
+    `PACKS OPENED: ${state.opened}`;
+}
+
+function ripCurrent() {
+  AudioEngine.resume();
+  AudioEngine.sfx.buy();
+  startOpening(PACK_LIST[0]);
+}
+
+$('buyBtn').addEventListener('click', ripCurrent);
+
+/* ============================================================
+   Pack opening — the rip
+   ============================================================ */
+let opening = null;   // {pack, tearLine, progress, cards, revealed}
+
+function startOpening(pack) {
+  const tearLine = makeTearLine(mulberry32((Math.random() * 1e9) >>> 0));
+  opening = { pack, tearLine, progress: 0, torn: false, cards: rollPack(pack), revealed: 0, lastRipSfx: 0 };
+
+  renderPackCanvases(pack, $('packFlap'), $('packBody'), tearLine);
+  $('packFlap').classList.remove('flying');
+  $('packFlap').style.transform = '';
+  $('packBody').style.filter = `drop-shadow(0 0 10px ${pack.colors[1]}66)`;
+  $('packWrap').classList.add('idle');
+  $('packWrap').style.display = '';
+  $('ripHint').style.display = '';
+  $('ripHint').innerHTML = '&#9756; SWIPE ACROSS THE TOP TO RIP &#9758;';
+  $('stageRays').classList.remove('on');
+  $('shockwave').classList.remove('boom');
+  $('cardRow').innerHTML = '';
+  $('doneBtn').classList.add('hidden');
+  $('openOverlay').classList.remove('hidden');
+  fx.setAmbient({
+    rectFn: () => $('openStage').getBoundingClientRect(),
+    colors: [...pack.colors.slice(0, 2), '#ffffff'],
+  });
+  buildShop(); // refresh pity counter text behind the overlay
+}
+
+/* --- rip gesture: pointer drag across the top of the pack --- */
+(() => {
+  const wrap = $('packWrap');
+  let ripping = false;
+  let startX = 0, maxTravel = 0;
+
+  function pointerPos(e) {
+    const r = wrap.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+  }
+
+  wrap.addEventListener('pointerdown', e => {
+    if (!opening || opening.torn) return;
+    const p = pointerPos(e);
+    if (p.y > 0.38) return;            // must grab near the top
+    ripping = true;
+    startX = p.x;
+    maxTravel = 0;
+    wrap.classList.remove('idle');
+    wrap.classList.add('shaking');
+    wrap.setPointerCapture(e.pointerId);
+    AudioEngine.resume();
+  });
+
+  wrap.addEventListener('pointermove', e => {
+    if (!ripping || !opening || opening.torn) return;
+    const p = pointerPos(e);
+    maxTravel = Math.max(maxTravel, Math.abs(p.x - startX));
+    const progress = Math.min(1, maxTravel / 0.72);
+    if (progress > opening.progress) {
+      opening.progress = progress;
+      drawTearProgress(opening.pack, $('packBody'), opening.tearLine, progress);
+      // flap peels as you rip, light leaks out of the widening tear
+      $('packFlap').style.transform =
+        `translate(${-progress * 12}px, ${-progress * 18}px) rotate(${-progress * 10}deg)`;
+      $('packBody').style.filter =
+        `drop-shadow(0 0 ${10 + progress * 30}px ${opening.pack.colors[1]}) brightness(${1 + progress * 0.25})`;
+      const now = performance.now();
+      if (now - opening.lastRipSfx > 55) {
+        opening.lastRipSfx = now;
+        AudioEngine.sfx.rip(progress);
+        if (navigator.vibrate) navigator.vibrate(8);
+        // sparks fly from the tear tip
+        const r = wrap.getBoundingClientRect();
+        fx.burst(r.left + r.width * progress, r.top + r.height * 0.2,
+                 ['#ffffff', opening.pack.colors[0]], 4, 3);
+      }
+      if (progress >= 1) finishRip();
+    }
+  });
+
+  function release() {
+    ripping = false;
+    if (opening && !opening.torn) {
+      wrap.classList.remove('shaking');
+      wrap.classList.add('idle');
+    }
+  }
+  wrap.addEventListener('pointerup', release);
+  wrap.addEventListener('pointercancel', release);
+})();
+
+function finishRip() {
+  const o = opening;
+  o.torn = true;
+  const wrap = $('packWrap');
+  wrap.classList.remove('shaking', 'idle');
+
+  AudioEngine.sfx.burst();
+  fx.shake();
+  fx.flash();
+  if (navigator.vibrate) navigator.vibrate([30, 20, 60]);
+
+  // foil flap flies off
+  $('packFlap').classList.add('flying');
+
+  const r = wrap.getBoundingClientRect();
+  const stage = $('openStage').getBoundingClientRect();
+
+  // shockwave ring from the tear
+  const shock = $('shockwave');
+  shock.style.left = (r.left - stage.left + r.width / 2) + 'px';
+  shock.style.top = (r.top - stage.top + r.height * 0.2) + 'px';
+  shock.classList.remove('boom');
+  void shock.offsetWidth;
+  shock.classList.add('boom');
+
+  // particle eruption from the tear
+  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, o.pack.colors, 50, 10);
+  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, ['#ffffff'], 16, 5);
+
+  // pack body drops away, the mystery card pops out
+  setTimeout(() => {
+    wrap.style.display = 'none';
+    $('ripHint').style.display = 'none';
+    spinReveal(o.cards[0]);
+  }, 420);
+}
+
+/* The big moment: one card pops out of the pack, spins as a
+   white-hot mystery, slows down... then SLAMS into its rarity. */
+function spinReveal(card) {
+  const row = $('cardRow');
+  row.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'pop-wrap';
+  const el = buildCardEl(card);
+  el.classList.add('big-reveal');
+  el.style.transition = 'none';   // JS drives the spin, not the flip transition
+  const cover = document.createElement('div');
+  cover.className = 'mystery-cover';
+  const coverBack = document.createElement('div');
+  coverBack.className = 'mystery-cover back';
+  el.append(cover, coverBack);
+  wrap.appendChild(el);
+  row.appendChild(wrap);
+
+  AudioEngine.sfx.cardSlide(0);
+  AudioEngine.sfx.riser(2.4);
+
+  // white rays while fate is undecided
+  $('stageRays').style.setProperty('--raycolor', '#ffffff');
+  $('stageRays').classList.add('on');
+
+  const SPIN_MS = 2300;
+  const start = performance.now();
+  let rot = 0, lastSpark = 0;
+
+  function spin(now) {
+    const t = Math.min(1, (now - start) / SPIN_MS);
+    const vel = 30 - 22 * t;                 // fast → slow
+    rot += vel;
+    el.style.transform = `rotateY(${rot}deg)`;
+    if (now - lastSpark > 130) {
+      lastSpark = now;
+      const r = el.getBoundingClientRect();
+      fx.burst(r.left + r.width * Math.random(), r.top + r.height * Math.random(),
+               ['#ffffff', '#bfe9ff'], 3, 2 + t * 3);
+    }
+    if (t < 1) requestAnimationFrame(spin);
+    else settle();
+  }
+
+  function settle() {
+    // glide to face-front, then reveal
+    const target = Math.ceil(rot / 360) * 360;
+    el.style.transition = 'transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1)';
+    el.style.transform = `rotateY(${target}deg)`;
+    setTimeout(reveal, 580);
+  }
+
+  function reveal() {
+    cover.classList.add('off');
+    coverBack.classList.add('off');
+    el.classList.add('flipped');             // triggers the rarity jolt animation
+    fx.flash();
+    fx.shake();
+    AudioEngine.sfx.reveal(card.rarity);
+    $('stageRays').style.setProperty('--raycolor', RARITIES[card.rarity].color);
+
+    const r = el.getBoundingClientRect();
+    const pal = RARITIES[card.rarity].palette;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    fx.burst(cx, cy, ['#ffffff'], 20, 6);
+    if (card.rarity === 'rare') fx.burst(cx, cy, pal, 24, 6);
+    if (card.rarity === 'epic') { fx.burst(cx, cy, pal, 44, 8); }
+    if (card.rarity === 'legendary') {
+      fx.confetti();
+      fx.burst(cx, cy, pal, 70, 11);
+      if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 120]);
+    }
+    addCard(card);
+    setTimeout(() => $('doneBtn').classList.remove('hidden'), 750);
+  }
+
+  requestAnimationFrame(spin);
+}
+
+$('doneBtn').addEventListener('click', () => {
+  $('openOverlay').classList.add('hidden');
+  $('stageRays').classList.remove('on');
+  fx.setAmbient(null);
+  opening = null;
+  buildShop();
+  renderCollection();
+  renderTrade();
+  AudioEngine.sfx.coin();
+});
+
+/* ============================================================
+   Minigame — Double or Nothing
+   ============================================================ */
+const SUITS = ['♠', '♥', '♦', '♣'];
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+let duel = null;   // {pot, streak}
+
+function drawDuelCard(el, rank, suit) {
+  el.classList.remove('back', 'pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+  el.classList.toggle('red-suit', suit === '♥' || suit === '♦');
+  el.textContent = RANKS[rank] + suit;
+}
+
+function resetDuelTable(msg = '') {
+  $('dealerCard').className = 'duel-card back';
+  $('playerCard').className = 'duel-card back';
+  $('dealerCard').textContent = '';
+  $('playerCard').textContent = '';
+  $('potAmount').textContent = duel ? duel.pot : 0;
+  $('streakBadge').textContent = duel && duel.streak ? `x${duel.streak} STREAK!` : '';
+  $('duelMsg').textContent = msg;
+  $('betControls').classList.toggle('hidden', !!duel);
+  $('duelControls').classList.toggle('hidden', !duel);
+  $('bestStreak').textContent = state.bestStreak;
+}
+
+function duelFlip() {
+  const pRank = Math.floor(Math.random() * 13);
+  let dRank = Math.floor(Math.random() * 13);
+  // ties go to the dealer's reroll — keeps it brutal but fair-feeling
+  while (dRank === pRank) dRank = Math.floor(Math.random() * 13);
+  drawDuelCard($('playerCard'), pRank, SUITS[Math.floor(Math.random() * 4)]);
+  AudioEngine.sfx.flip();
+  setTimeout(() => {
+    drawDuelCard($('dealerCard'), dRank, SUITS[Math.floor(Math.random() * 4)]);
+    AudioEngine.sfx.flip();
+    setTimeout(() => {
+      if (pRank > dRank) {
+        duel.pot *= 2;
+        duel.streak++;
+        state.bestStreak = Math.max(state.bestStreak, duel.streak);
+        save();
+        AudioEngine.sfx.win();
+        const r = $('playerCard').getBoundingClientRect();
+        fx.burst(r.left + r.width / 2, r.top + r.height / 2, ['#f5b83d', '#fff'], 18, 5);
+        $('potAmount').textContent = duel.pot;
+        $('streakBadge').textContent = `x${duel.streak} STREAK!`;
+        $('duelMsg').textContent = 'YOU WIN! DOUBLE UP OR CASH OUT?';
+        $('bestStreak').textContent = state.bestStreak;
+      } else {
+        AudioEngine.sfx.lose();
+        fx.shake();
+        $('duelMsg').textContent = `BUSTED! LOST ${duel.pot} COINS.`;
+        duel = null;
+        setTimeout(() => resetDuelTable('DEALER TAKES IT. GO AGAIN?'), 1400);
+        $('betControls').classList.remove('hidden');
+        $('duelControls').classList.add('hidden');
+        $('potAmount').textContent = 0;
+        $('streakBadge').textContent = '';
+      }
+    }, 500);
+  }, 450);
+}
+
+document.querySelectorAll('.bet-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const bet = +btn.dataset.bet;
+    AudioEngine.resume();
+    if (duel) return;
+    if (state.coins < bet) { AudioEngine.sfx.deny(); $('duelMsg').textContent = 'NOT ENOUGH COINS!'; return; }
+    setCoins(state.coins - bet);
+    duel = { pot: bet, streak: 0 };
+    resetDuelTable('FLIPPING...');
+    duelFlip();
+  });
+});
+
+$('flipAgainBtn').addEventListener('click', () => {
+  if (!duel) return;
+  $('dealerCard').className = 'duel-card back';
+  $('playerCard').className = 'duel-card back';
+  $('duelMsg').textContent = 'FLIPPING...';
+  setTimeout(duelFlip, 250);
+});
+
+$('cashOutBtn').addEventListener('click', () => {
+  if (!duel) return;
+  setCoins(state.coins + duel.pot);
+  AudioEngine.sfx.coin();
+  fx.confetti();
+  $('duelMsg').textContent = `CASHED OUT ${duel.pot} COINS!`;
+  duel = null;
+  resetDuelTable(`NICE! COINS BANKED.`);
+});
+
+/* ============================================================
+   Collection
+   ============================================================ */
+function renderCollection() {
+  const grid = $('collectionGrid');
+  grid.innerHTML = '';
+  const total = state.collection.reduce((a, c) => a + c.count, 0);
+  const byRarity = RARITY_ORDER.map(r =>
+    `<span style="color:${RARITIES[r].color}">${state.collection.filter(c => c.rarity === r).reduce((a, c) => a + c.count, 0)} ${RARITIES[r].label}</span>`
+  ).join(' · ');
+  $('collectionStats').innerHTML = `${total} CARDS OWNED<br>${byRarity}`;
+
+  if (!state.collection.length) {
+    grid.innerHTML = '<div class="empty-note">NO CARDS YET.<br>GO RIP SOME PACKS!</div>';
+    return;
+  }
+  const sorted = [...state.collection].sort((a, b) =>
+    RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || a.name.localeCompare(b.name));
+  for (const entry of sorted) {
+    const holder = document.createElement('div');
+    holder.className = 'coll-card';
+    holder.appendChild(buildCardEl(entry, { faceUp: true }));
+    if (entry.count > 1) {
+      const badge = document.createElement('div');
+      badge.className = 'coll-count';
+      badge.textContent = 'x' + entry.count;
+      holder.appendChild(badge);
+    }
+    grid.appendChild(holder);
+  }
+}
+
+/* ============================================================
+   Trading — gift codes
+   ============================================================ */
+function checksum(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h.toString(36).toUpperCase().slice(0, 4).padStart(4, '0');
+}
+
+function makeGiftCode(entry) {
+  const payload = `${entry.seed.toString(36)}.${RARITY_ORDER.indexOf(entry.rarity)}`;
+  return `PLX-${payload.toUpperCase()}-${checksum(payload)}`;
+}
+
+function parseGiftCode(code) {
+  const m = code.trim().toUpperCase().match(/^PLX-([0-9A-Z]+)\.(\d)-([0-9A-Z]{4})$/);
+  if (!m) return null;
+  const payload = `${m[1].toLowerCase()}.${m[2]}`;
+  if (checksum(payload) !== m[3]) return null;
+  const seed = parseInt(m[1].toLowerCase(), 36) >>> 0;
+  const rarity = RARITY_ORDER[+m[2]];
+  if (!rarity) return null;
+  return cardFromSeed(seed, rarity);
+}
+
+function renderTrade() {
+  const grid = $('tradeGrid');
+  grid.innerHTML = '';
+  if (!state.collection.length) {
+    grid.innerHTML = '<div class="empty-note">NOTHING TO TRADE YET.</div>';
+    return;
+  }
+  const sorted = [...state.collection].sort((a, b) =>
+    RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity));
+  for (const entry of sorted) {
+    const holder = document.createElement('div');
+    holder.className = 'coll-card';
+    holder.appendChild(buildCardEl(entry, { faceUp: true }));
+    if (entry.count > 1) {
+      const badge = document.createElement('div');
+      badge.className = 'coll-count';
+      badge.textContent = 'x' + entry.count;
+      holder.appendChild(badge);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'coll-actions';
+    const gift = document.createElement('button');
+    gift.className = 'mini-btn';
+    gift.textContent = 'GIFT';
+    gift.addEventListener('click', () => {
+      const code = makeGiftCode(entry);
+      removeCard(entry);
+      renderTrade();
+      renderCollection();
+      $('codeText').textContent = code;
+      $('codeModal').classList.remove('hidden');
+      AudioEngine.sfx.buy();
+    });
+    actions.appendChild(gift);
+    holder.appendChild(actions);
+    grid.appendChild(holder);
+  }
+}
+
+$('redeemBtn').addEventListener('click', () => {
+  const card = parseGiftCode($('redeemInput').value);
+  if (!card) {
+    AudioEngine.sfx.deny();
+    $('tradeMsg').textContent = 'INVALID CODE!';
+    return;
+  }
+  addCard(card);
+  $('redeemInput').value = '';
+  $('tradeMsg').textContent = `RECEIVED: ${card.name} (${RARITIES[card.rarity].label})!`;
+  AudioEngine.sfx.reveal(card.rarity);
+  if (card.rarity === 'legendary') { fx.confetti(); fx.flash(); }
+  renderTrade();
+  renderCollection();
+});
+
+$('copyCodeBtn').addEventListener('click', () => {
+  navigator.clipboard?.writeText($('codeText').textContent);
+  $('copyCodeBtn').textContent = 'COPIED!';
+  setTimeout(() => { $('copyCodeBtn').textContent = 'COPY CODE'; }, 1200);
+});
+$('closeCodeBtn').addEventListener('click', () => $('codeModal').classList.add('hidden'));
+
+/* ============================================================
+   Navigation + boot
+   ============================================================ */
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    AudioEngine.resume();
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    $('screen-' + btn.dataset.screen).classList.add('active');
+    AudioEngine.sfx.flip();
+    if (btn.dataset.screen === 'collection') renderCollection();
+    if (btn.dataset.screen === 'trade') renderTrade();
+  });
+});
+
+$('muteBtn').addEventListener('click', () => {
+  state.muted = !state.muted;
+  AudioEngine.setMuted(state.muted);
+  $('muteBtn').classList.toggle('muted', state.muted);
+  save();
+});
+
+// audio can only start after a user gesture
+document.body.addEventListener('pointerdown', () => AudioEngine.resume(), { once: true });
+
+load();
+state.coins = 999999999;   // unlimited money mode
+AudioEngine.setMuted(state.muted);
+$('muteBtn').classList.toggle('muted', state.muted);
+setCoins();
+buildShop();
+renderCollection();
+renderTrade();
+resetDuelTable();
+
+</script>
+</body>
+</html>
