@@ -88,6 +88,17 @@ const AudioEngine = (() => {
       for (let i = 0; i < 5; i++)
         tone({ type: 'sine', freq: midi(96 + (i * 5) % 12), time: 0.12 + i * 0.05, dur: 0.18, vol: 0.07 });
     },
+    // suspense build while the mystery card spins
+    riser(dur = 2.4) {
+      resume();
+      tone({ type: 'sawtooth', freq: 70, dur, vol: 0.13, slide: 580 });
+      noise({ dur, vol: 0.13, freq: 500, q: 1.3, slide: 3800 });
+      let at = 0, gap = 0.24;
+      for (let i = 0; i < 16 && at < dur - 0.15; i++) {
+        tone({ type: 'square', freq: midi(70 + i), time: at, dur: 0.05, vol: 0.09 });
+        at += gap; gap *= 0.87;
+      }
+    },
     cardSlide(i) {
       resume();
       tone({ type: 'triangle', freq: 500 + i * 90, dur: 0.1, vol: 0.18, slide: 220 });

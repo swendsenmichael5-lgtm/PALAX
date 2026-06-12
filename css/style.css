@@ -255,47 +255,11 @@ html, body {
   box-shadow: 0 0 16px rgba(255,56,100,0.45), 0 5px 0 var(--magenta-dark), inset 0 2px 0 rgba(255,255,255,0.35);
 }
 .danger-btn:active:not(:disabled) { box-shadow: 0 0 10px rgba(255,56,100,0.3), 0 1px 0 var(--magenta-dark); }
-.free-btn {
-  background: linear-gradient(180deg, #c08ef5, var(--violet) 55%, #541f86);
-  color: #fff;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
-  box-shadow: 0 0 16px rgba(123,47,190,0.5), 0 5px 0 #541f86, inset 0 2px 0 rgba(255,255,255,0.3);
-  width: 100%;
-}
-.free-btn:active:not(:disabled) { box-shadow: 0 0 10px rgba(123,47,190,0.35), 0 1px 0 #541f86; }
-.free-btn.ready { animation: readyPulse 0.9s ease-in-out infinite; }
-@keyframes readyPulse {
-  50% { transform: scale(1.03); filter: brightness(1.35); }
-}
-
-.free-pack-bar { width: 100%; max-width: 380px; margin: 4px 0 14px; }
-
-/* ---------------- featured pack carousel ---------------- */
-.carousel {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  justify-content: center;
-  width: 100%;
-}
-.arrow-btn {
-  font-family: inherit;
-  font-size: 16px;
-  color: var(--cyan);
-  background: var(--panel);
-  border: 2px solid var(--cyan-dark);
-  border-radius: 4px;
-  padding: 16px 10px;
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(45,226,230,0.25);
-  transition: transform 0.1s, filter 0.15s;
-}
-.arrow-btn:hover { filter: brightness(1.4); }
-.arrow-btn:active { transform: scale(0.9); }
-
+/* ---------------- the one pack ---------------- */
 .pack-stage {
-  width: 168px;
-  height: 224px;
+  width: 220px;
+  height: 290px;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,21 +267,17 @@ html, body {
 }
 .pack-holo {
   position: relative;
-  width: 156px; height: 208px;
+  width: 198px; height: 264px;
   cursor: pointer;
   transition: transform 0.18s ease;
   transform-style: preserve-3d;
   animation: packFloat 3.2s ease-in-out infinite;
-  filter: drop-shadow(0 16px 14px rgba(0,0,0,0.6)) drop-shadow(0 0 22px var(--packglow, transparent));
+  filter: drop-shadow(0 18px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 30px var(--packglow, transparent));
 }
 @keyframes packFloat {
   0%, 100% { translate: 0 0; }
-  50% { translate: 0 -10px; }
+  50% { translate: 0 -12px; }
 }
-.pack-holo.slide-l { animation: slideL 0.28s ease both, packFloat 3.2s ease-in-out 0.28s infinite; }
-.pack-holo.slide-r { animation: slideR 0.28s ease both, packFloat 3.2s ease-in-out 0.28s infinite; }
-@keyframes slideL { from { transform: translateX(-60px) rotate(-6deg); opacity: 0; } }
-@keyframes slideR { from { transform: translateX(60px) rotate(6deg); opacity: 0; } }
 .pack-holo canvas {
   width: 100%; height: 100%;
   display: block;
@@ -336,18 +296,6 @@ html, body {
 @keyframes packScan {
   from { background-position: 0 -120%; }
   to { background-position: 0 220%; }
-}
-
-.carousel-dots { display: flex; gap: 8px; margin: 12px 0 4px; }
-.carousel-dots .dot {
-  width: 8px; height: 8px;
-  background: #2a3242;
-  border-radius: 1px;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-.carousel-dots .dot.active {
-  background: var(--cyan);
-  box-shadow: 0 0 8px rgba(45,226,230,0.8);
 }
 
 .pack-info {
@@ -471,16 +419,53 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
 
 body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 
-/* ---------------- revealed cards (flip UP now) ---------------- */
+/* ---------------- the revealed card ---------------- */
 .card-row {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
   justify-content: center;
-  perspective: 900px;
+  perspective: 1000px;
   min-height: 150px;
   z-index: 3;
 }
+
+/* wrapper handles the pop-out; inner card handles the spin */
+.pop-wrap {
+  perspective: 1000px;
+  animation: popOut 0.65s cubic-bezier(0.2, 1.35, 0.4, 1) both;
+}
+@keyframes popOut {
+  from { transform: translateY(170px) scale(0.1); opacity: 0; filter: brightness(4); }
+}
+.big-reveal { width: 196px; height: 274px; }
+.big-reveal .card-name { font-size: 9px; min-height: 34px; padding: 9px 4px 2px; }
+.big-reveal .card-rarity { font-size: 8px; padding-bottom: 9px; letter-spacing: 2px; }
+
+/* white-hot mystery cover while the card spins */
+.mystery-cover {
+  position: absolute; inset: 0;
+  z-index: 6;
+  border-radius: 5px;
+  background: radial-gradient(circle at 50% 36%, #ffffff, #e2f7ff 55%, #8fd8ff 100%);
+  box-shadow:
+    0 0 30px rgba(255,255,255,0.95),
+    0 0 80px rgba(160,220,255,0.75),
+    0 0 160px rgba(120,200,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: coverPulse 0.45s ease-in-out infinite;
+  transition: opacity 0.16s ease;
+}
+.mystery-cover::after {
+  content: '?';
+  font-size: 44px;
+  color: rgba(40, 80, 140, 0.3);
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+}
+.mystery-cover.off { opacity: 0; pointer-events: none; }
+@keyframes coverPulse { 50% { filter: brightness(1.3); } }
 .game-card {
   width: 96px; height: 134px;
   position: relative;

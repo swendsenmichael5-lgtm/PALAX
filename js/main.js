@@ -4,27 +4,16 @@
 
 /* ---------------- pack catalogue ---------------- */
 const PACKS = {
-  standard: {
-    id: 'standard', name: 'NEON PACK', cost: 25, cards: 3,
+  palax: {
+    id: 'palax', name: 'PALAX PACK', cost: 0, cards: 1,
     colors: ['#9ff0f2', '#2de2e6', '#15929e', '#0a3b4a'],
-    odds: { common: 62, uncommon: 25, rare: 10, epic: 2.5, legendary: 0.5 },
-  },
-  jumbo: {
-    id: 'jumbo', name: 'VAPOR PACK', cost: 60, cards: 5,
-    colors: ['#ff9ec2', '#ff3864', '#b3164a', '#54122e'],
-    odds: { common: 50, uncommon: 28, rare: 15, epic: 5.5, legendary: 1.5 },
-  },
-  mega: {
-    id: 'mega', name: 'CHROME PACK', cost: 120, cards: 5,
-    colors: ['#fff3c4', '#f9c80e', '#c98a06', '#6e4a0c'],
-    odds: { common: 30, uncommon: 30, rare: 24, epic: 12, legendary: 4 },
+    odds: { common: 44, uncommon: 28, rare: 17, epic: 8, legendary: 3 },
   },
 };
 const PACK_LIST = Object.values(PACKS);
 
-const FREE_PACK_COOLDOWN = 180_000;        // 3 minutes
 const PITY_RARE = 5;                       // guaranteed rare+ every N packs
-const PITY_LEGENDARY = 40;                 // guaranteed legendary every N packs
+const PITY_LEGENDARY = 25;                 // guaranteed legendary every N packs
 
 /* ---------------- state ---------------- */
 const SAVE_KEY = 'palax-save-v1';
@@ -49,19 +38,9 @@ function load() {
 
 const $ = id => document.getElementById(id);
 
-/* ---------------- coins (rolling counter) ---------------- */
-let coinAnimFrom = 0, coinAnimStart = 0;
-function setCoins(n) {
-  coinAnimFrom = parseInt($('coinCount').textContent, 10) || 0;
-  state.coins = Math.max(0, n);
-  coinAnimStart = performance.now();
-  const roll = now => {
-    const t = Math.min(1, (now - coinAnimStart) / 450);
-    const eased = 1 - Math.pow(1 - t, 3);
-    $('coinCount').textContent = Math.round(coinAnimFrom + (state.coins - coinAnimFrom) * eased);
-    if (t < 1) requestAnimationFrame(roll);
-  };
-  requestAnimationFrame(roll);
+/* ---------------- coins: you are infinitely rich ---------------- */
+function setCoins() {
+  $('coinCount').textContent = '∞';
   const pill = $('coinsPill');
   pill.classList.remove('bump');
   void pill.offsetWidth;
@@ -225,87 +204,37 @@ function addTilt(el, max = 14) {
   });
 }
 
-let shopIndex = 0;
-
-function buildShop(slideDir = 0) {
-  const pack = PACK_LIST[shopIndex];
+function buildShop() {
+  const pack = PACK_LIST[0];
   const stage = $('packStage');
   stage.innerHTML = '';
   const holo = document.createElement('div');
-  holo.className = 'pack-holo' + (slideDir < 0 ? ' slide-l' : slideDir > 0 ? ' slide-r' : '');
+  holo.className = 'pack-holo';
   holo.style.setProperty('--packglow', pack.colors[1] + '99');
   holo.appendChild(drawPackArt(pack));
   addTilt(holo);
-  holo.addEventListener('click', tryBuyCurrent);
+  holo.addEventListener('click', ripCurrent);
   stage.appendChild(holo);
 
-  $('carouselDots').innerHTML = PACK_LIST.map((_, i) =>
-    `<div class="dot${i === shopIndex ? ' active' : ''}"></div>`).join('');
-
-  const oddsLine = RARITY_ORDER.slice(2).map(r =>
+  const oddsLine = RARITY_ORDER.map(r =>
     `<span style="color:${RARITIES[r].color}">${RARITIES[r].label} ${pack.odds[r]}%</span>`).join(' · ');
   $('packInfo').innerHTML =
     `<div class="p-name">${pack.name}</div>` +
-    `<div class="p-meta">${pack.cards} CARDS PER PACK</div>` +
+    `<div class="p-meta">1 MYSTERY CARD INSIDE</div>` +
     `<div class="p-odds">${oddsLine}</div>`;
-  $('buyBtn').innerHTML = `BUY — ${pack.cost} <span class="coin-icon"></span>`;
 
   $('pityHint').innerHTML =
     `PITY: RARE+ GUARANTEED EVERY ${PITY_RARE} PACKS &middot; LEGENDARY EVERY ${PITY_LEGENDARY}<br>` +
     `PACKS OPENED: ${state.opened}`;
 }
 
-function tryBuyCurrent() {
-  const pack = PACK_LIST[shopIndex];
+function ripCurrent() {
   AudioEngine.resume();
-  if (state.coins < pack.cost) {
-    AudioEngine.sfx.deny();
-    $('buyBtn').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
-                         { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 200 });
-    return;
-  }
-  setCoins(state.coins - pack.cost);
   AudioEngine.sfx.buy();
-  startOpening(pack);
+  startOpening(PACK_LIST[0]);
 }
 
-$('buyBtn').addEventListener('click', tryBuyCurrent);
-$('prevPack').addEventListener('click', () => {
-  shopIndex = (shopIndex + PACK_LIST.length - 1) % PACK_LIST.length;
-  AudioEngine.sfx.flip();
-  buildShop(-1);
-});
-$('nextPack').addEventListener('click', () => {
-  shopIndex = (shopIndex + 1) % PACK_LIST.length;
-  AudioEngine.sfx.flip();
-  buildShop(1);
-});
-
-/* ---------------- free pack timer ---------------- */
-function updateFreePack() {
-  const btn = $('freePackBtn');
-  const left = state.lastFreePack + FREE_PACK_COOLDOWN - Date.now();
-  if (left <= 0) {
-    btn.disabled = false;
-    btn.classList.add('ready');
-    btn.innerHTML = 'FREE PACK — RIP IT!';
-  } else {
-    btn.disabled = true;
-    btn.classList.remove('ready');
-    const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
-    btn.innerHTML = `FREE PACK IN ${m}:${String(s).padStart(2, '0')}`;
-  }
-}
-setInterval(updateFreePack, 1000);
-
-$('freePackBtn').addEventListener('click', () => {
-  if (state.lastFreePack + FREE_PACK_COOLDOWN - Date.now() > 0) return;
-  state.lastFreePack = Date.now();
-  save();
-  updateFreePack();
-  AudioEngine.sfx.buy();
-  startOpening(PACKS.standard);
-});
+$('buyBtn').addEventListener('click', ripCurrent);
 
 /* ============================================================
    Pack opening — the rip
@@ -423,62 +352,92 @@ function finishRip() {
   void shock.offsetWidth;
   shock.classList.add('boom');
 
-  // god rays colored by the best card inside
-  const rank = c => RARITY_ORDER.indexOf(c.rarity);
-  const best = o.cards.reduce((a, b) => rank(a) >= rank(b) ? a : b);
-  $('stageRays').style.setProperty('--raycolor', RARITIES[best.rarity].color);
-  $('stageRays').classList.add('on');
-
   // particle eruption from the tear
   fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, o.pack.colors, 50, 10);
   fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, ['#ffffff'], 16, 5);
 
-  // pack body drops away, cards pour out
+  // pack body drops away, the mystery card pops out
   setTimeout(() => {
     wrap.style.display = 'none';
     $('ripHint').style.display = 'none';
-    spawnCards(o.cards);
+    spinReveal(o.cards[0]);
   }, 420);
 }
 
-function spawnCards(cards) {
+/* The big moment: one card pops out of the pack, spins as a
+   white-hot mystery, slows down... then SLAMS into its rarity. */
+function spinReveal(card) {
   const row = $('cardRow');
-  cards.forEach((card, i) => {
-    setTimeout(() => {
-      const el = buildCardEl(card);
-      el.classList.add('spawn');
-      el.style.animationDelay = '0s';
-      row.appendChild(el);
-      AudioEngine.sfx.cardSlide(i);
-      const cr = el.getBoundingClientRect();
-      fx.burst(cr.left + cr.width / 2, cr.top + cr.height / 2, ['#ffffff', '#f5b83d'], 8, 3);
-      el.addEventListener('click', () => revealCard(el, card), { once: true });
-    }, i * 140);
-  });
-  // hint: tap to flip
-  setTimeout(() => { $('ripHint').style.display = ''; $('ripHint').textContent = 'TAP CARDS TO FLIP'; }, cards.length * 140 + 200);
-}
+  row.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'pop-wrap';
+  const el = buildCardEl(card);
+  el.classList.add('big-reveal');
+  el.style.transition = 'none';   // JS drives the spin, not the flip transition
+  const cover = document.createElement('div');
+  cover.className = 'mystery-cover';
+  el.appendChild(cover);
+  wrap.appendChild(el);
+  row.appendChild(wrap);
 
-function revealCard(el, card) {
-  el.classList.add('flipped');
-  AudioEngine.sfx.flip();
-  setTimeout(() => {
+  AudioEngine.sfx.cardSlide(0);
+  AudioEngine.sfx.riser(2.4);
+
+  // white rays while fate is undecided
+  $('stageRays').style.setProperty('--raycolor', '#ffffff');
+  $('stageRays').classList.add('on');
+
+  const SPIN_MS = 2300;
+  const start = performance.now();
+  let rot = 0, lastSpark = 0;
+
+  function spin(now) {
+    const t = Math.min(1, (now - start) / SPIN_MS);
+    const vel = 30 - 22 * t;                 // fast → slow
+    rot += vel;
+    el.style.transform = `rotateY(${rot}deg)`;
+    if (now - lastSpark > 130) {
+      lastSpark = now;
+      const r = el.getBoundingClientRect();
+      fx.burst(r.left + r.width * Math.random(), r.top + r.height * Math.random(),
+               ['#ffffff', '#bfe9ff'], 3, 2 + t * 3);
+    }
+    if (t < 1) requestAnimationFrame(spin);
+    else settle();
+  }
+
+  function settle() {
+    // glide to face-front, then reveal
+    const target = Math.ceil(rot / 360) * 360;
+    el.style.transition = 'transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1)';
+    el.style.transform = `rotateY(${target}deg)`;
+    setTimeout(reveal, 580);
+  }
+
+  function reveal() {
+    cover.classList.add('off');
+    el.classList.add('flipped');             // triggers the rarity jolt animation
+    fx.flash();
+    fx.shake();
     AudioEngine.sfx.reveal(card.rarity);
+    $('stageRays').style.setProperty('--raycolor', RARITIES[card.rarity].color);
+
     const r = el.getBoundingClientRect();
     const pal = RARITIES[card.rarity].palette;
-    if (card.rarity === 'rare') fx.burst(r.left + r.width / 2, r.top + r.height / 2, pal, 14, 4);
-    if (card.rarity === 'epic') { fx.burst(r.left + r.width / 2, r.top + r.height / 2, pal, 30, 6); fx.shake(); }
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    fx.burst(cx, cy, ['#ffffff'], 20, 6);
+    if (card.rarity === 'rare') fx.burst(cx, cy, pal, 24, 6);
+    if (card.rarity === 'epic') { fx.burst(cx, cy, pal, 44, 8); }
     if (card.rarity === 'legendary') {
-      fx.flash(); fx.shake(); fx.confetti();
-      fx.burst(r.left + r.width / 2, r.top + r.height / 2, pal, 50, 9);
-      if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 100]);
+      fx.confetti();
+      fx.burst(cx, cy, pal, 70, 11);
+      if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 120]);
     }
-  }, 220);
-  addCard(card);
-  opening.revealed++;
-  if (opening.revealed >= opening.cards.length) {
-    setTimeout(() => $('doneBtn').classList.remove('hidden'), 700);
+    addCard(card);
+    setTimeout(() => $('doneBtn').classList.remove('hidden'), 750);
   }
+
+  requestAnimationFrame(spin);
 }
 
 $('doneBtn').addEventListener('click', () => {
@@ -617,22 +576,6 @@ function renderCollection() {
       badge.textContent = 'x' + entry.count;
       holder.appendChild(badge);
     }
-    const actions = document.createElement('div');
-    actions.className = 'coll-actions';
-    if (entry.count > 1) {
-      const sell = document.createElement('button');
-      sell.className = 'mini-btn sell';
-      sell.textContent = `SELL DUPE +${RARITIES[entry.rarity].sell}`;
-      sell.addEventListener('click', () => {
-        removeCard(entry);
-        setCoins(state.coins + RARITIES[entry.rarity].sell);
-        AudioEngine.sfx.coin();
-        renderCollection();
-        renderTrade();
-      });
-      actions.appendChild(sell);
-    }
-    holder.appendChild(actions);
     grid.appendChild(holder);
   }
 }
@@ -751,11 +694,11 @@ $('muteBtn').addEventListener('click', () => {
 document.body.addEventListener('pointerdown', () => AudioEngine.resume(), { once: true });
 
 load();
+state.coins = 999999999;   // unlimited money mode
 AudioEngine.setMuted(state.muted);
 $('muteBtn').classList.toggle('muted', state.muted);
-setCoins(state.coins);
+setCoins();
 buildShop();
-updateFreePack();
 renderCollection();
 renderTrade();
 resetDuelTable();
