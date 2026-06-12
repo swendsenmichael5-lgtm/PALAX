@@ -16,6 +16,19 @@ const PITY_RARE = 5;                       // guaranteed rare+ every N packs
 const PITY_LEGENDARY = 25;                 // guaranteed legendary every N packs
 
 /* ---------------- state ---------------- */
+/* localStorage can throw on file:// or private browsing — never let
+   that kill the game; fall back to in-memory saves */
+const store = (() => {
+  try {
+    localStorage.setItem('__plx', '1');
+    localStorage.removeItem('__plx');
+    return localStorage;
+  } catch (e) {
+    const m = {};
+    return { getItem: k => m[k] ?? null, setItem(k, v) { m[k] = v; }, removeItem(k) { delete m[k]; } };
+  }
+})();
+
 const SAVE_KEY = 'palax-save-v1';
 let state = {
   coins: 75,
@@ -28,10 +41,10 @@ let state = {
   collection: [],   // [{seed, rarity, name, count}]
 };
 
-function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+function save() { store.setItem(SAVE_KEY, JSON.stringify(state)); }
 function load() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = store.getItem(SAVE_KEY);
     if (raw) state = Object.assign(state, JSON.parse(raw));
   } catch (e) { /* fresh start */ }
 }
@@ -713,6 +726,7 @@ $('muteBtn').addEventListener('click', () => {
 // audio can only start after a user gesture
 document.body.addEventListener('pointerdown', () => AudioEngine.resume(), { once: true });
 
+$('jsWarn').classList.add('hidden');   // JS is alive — clear the warning
 load();
 state.coins = 999999999;   // unlimited money mode
 AudioEngine.setMuted(state.muted);

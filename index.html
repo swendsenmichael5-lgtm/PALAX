@@ -6,9 +6,30 @@
 <title>PALAX — Pixel Pack Ripper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
+
+<!-- visible until the game boots; if you can read this, the viewer blocked JS -->
+<div id="jsWarn">
+  &#9888; GAME NOT RUNNING<br><br>
+  This viewer blocks JavaScript (iPhone file previews do this).<br><br>
+  OPEN THIS FILE IN SAFARI OR CHROME,<br>or use the web link instead.
+</div>
+<script>
+/* surface any fatal error on-screen instead of failing silently */
+window.onerror = function (msg, src, line) {
+  var d = document.getElementById('errBox');
+  if (!d) {
+    d = document.createElement('div');
+    d.id = 'errBox';
+    d.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;' +
+      'background:#b3164a;color:#fff;font:10px monospace;padding:10px;border:2px solid #fff;';
+    if (document.body) document.body.appendChild(d);
+  }
+  d.textContent = 'ERROR: ' + msg + ' (line ' + line + ')';
+};
+</script>
 
 <!-- synthwave backdrop layers -->
 <div id="bgStars"></div>
@@ -117,8 +138,8 @@
   </div>
 </div>
 
-<script src="js/audio.js?v=7"></script>
-<script src="js/cards.js?v=7"></script>
-<script src="js/main.js?v=7"></script>
+<script src="js/audio.js?v=8"></script>
+<script src="js/cards.js?v=8"></script>
+<script src="js/main.js?v=8"></script>
 </body>
 </html>
