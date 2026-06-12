@@ -188,19 +188,31 @@ const fx = (() => {
    Shop
    ============================================================ */
 
-/* 3D tilt that follows the pointer */
+/* 3D tilt that follows the pointer; holo foils shift with the tilt
+   like catching the light on a real card */
 function addTilt(el, max = 14) {
+  const holos = () => (el.querySelectorAll ? [...el.querySelectorAll('.holo')] : []);
   el.addEventListener('pointermove', e => {
     const r = el.getBoundingClientRect();
     const dx = (e.clientX - r.left) / r.width - 0.5;
     const dy = (e.clientY - r.top) / r.height - 0.5;
     el.style.animation = 'none';
     el.style.transform =
-      `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.1)`;
+      `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.08)`;
+    for (const h of holos()) {
+      h.style.animation = 'none';
+      h.style.backgroundPosition = `${50 + dx * 90}% ${50 + dy * 90}%`;
+      h.style.setProperty('--hx', `${50 + dx * 90}%`);
+      h.style.setProperty('--hy', `${50 + dy * 90}%`);
+    }
   });
   el.addEventListener('pointerleave', () => {
     el.style.transform = '';
     el.style.animation = '';
+    for (const h of holos()) {
+      h.style.animation = '';
+      h.style.backgroundPosition = '';
+    }
   });
 }
 
@@ -437,6 +449,7 @@ function spinReveal(card) {
       if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 120]);
     }
     addCard(card);
+    addTilt(el, 12);   // tilt the fresh pull to play with its foil
     setTimeout(() => $('doneBtn').classList.remove('hidden'), 750);
   }
 
@@ -572,7 +585,9 @@ function renderCollection() {
   for (const entry of sorted) {
     const holder = document.createElement('div');
     holder.className = 'coll-card';
-    holder.appendChild(buildCardEl(entry, { faceUp: true }));
+    const cardEl = buildCardEl(entry, { faceUp: true });
+    addTilt(cardEl, 10);
+    holder.appendChild(cardEl);
     if (entry.count > 1) {
       const badge = document.createElement('div');
       badge.className = 'coll-count';
@@ -620,7 +635,9 @@ function renderTrade() {
   for (const entry of sorted) {
     const holder = document.createElement('div');
     holder.className = 'coll-card';
-    holder.appendChild(buildCardEl(entry, { faceUp: true }));
+    const cardEl = buildCardEl(entry, { faceUp: true });
+    addTilt(cardEl, 10);
+    holder.appendChild(cardEl);
     if (entry.count > 1) {
       const badge = document.createElement('div');
       badge.className = 'coll-count';

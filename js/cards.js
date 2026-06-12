@@ -40,88 +40,186 @@ function cardFromSeed(seed, rarity) {
   return { seed, rarity, name };
 }
 
-/* Draw a card's pixel art onto a canvas (logical 48x48 art panel).
-   Each card is a tiny synthwave scene: night sky, rarity-colored
-   sun on the horizon, perspective grid, creature in silhouette-glow. */
-function drawCardArt(canvas, card) {
-  const S = 48, HORIZON = 30;
-  canvas.width = S;
-  canvas.height = S;
+/* ============================================================
+   3x5 pixel font — lets the whole card be true pixel art,
+   name and stats included. Each glyph: 5 rows x 3 bits.
+   ============================================================ */
+const FONT3X5 = {
+  A:0b010101111101101, B:0b110101110101110, C:0b011100100100011, D:0b110101101101110,
+  E:0b111100110100111, F:0b111100110100100, G:0b011100101101011, H:0b101101111101101,
+  I:0b111010010010111, J:0b001001001101010, K:0b101101110101101, L:0b100100100100111,
+  M:0b101111111101101, N:0b110101101101101, O:0b010101101101010, P:0b110101110100100,
+  Q:0b010101101110011, R:0b110101110101101, S:0b011100010001110, T:0b111010010010010,
+  U:0b101101101101111, V:0b101101101101010, W:0b101101111111101, X:0b101101010101101,
+  Y:0b101101010010010, Z:0b111001010100111,
+  '0':0b111101101101111, '1':0b010110010010111, '2':0b111001111100111, '3':0b111001011001111,
+  '4':0b101101111001001, '5':0b111100111001111, '6':0b111100111101111, '7':0b111001010010010,
+  '8':0b111101111101111, '9':0b111101111001111,
+  '?':0b111001011000010, '-':0b000000111000000, '%':0b101001010100101, ' ':0,
+};
+
+function drawText(ctx, str, x, y, color) {
+  ctx.fillStyle = color;
+  for (const ch of String(str).toUpperCase()) {
+    const bits = FONT3X5[ch] ?? FONT3X5['?'];
+    for (let r = 0; r < 5; r++)
+      for (let c = 0; c < 3; c++)
+        if (bits >> ((4 - r) * 3 + (2 - c)) & 1) ctx.fillRect(x + c, y + r, 1, 1);
+    x += 4;
+  }
+  return x;
+}
+const textW = str => String(str).length * 4 - 1;
+
+/* per-rarity card frame metals */
+const FRAMES = {
+  common:    ['#aab4c2', '#5d6878', '#2a3242'],
+  uncommon:  ['#9fe7b2', '#3a9c58', '#1b5230'],
+  rare:      ['#a8d4ff', '#3d7fc1', '#1a3f63'],
+  epic:      ['#dcb8ff', '#8a4cc4', '#4a1d73'],
+  legendary: ['#fff3c4', '#e8a81c', '#8a4d0f'],
+};
+
+/* card geometry (logical pixels) — CSS holo masks must match */
+const CARD_W = 64, CARD_H = 90;
+const ART = { x: 4, y: 17, w: 56, h: 44 };   // art window
+
+/* Draw the ENTIRE card face as pixel art: frame, name plate,
+   synthwave art window, stats bar, rarity gems. */
+function drawCardFace(canvas, card) {
+  canvas.width = CARD_W;
+  canvas.height = CARD_H;
   const ctx = canvas.getContext('2d');
   const pal = RARITIES[card.rarity].palette;
+  const [fLight, fMid, fDark] = FRAMES[card.rarity];
   const rnd = mulberry32(card.seed ^ 0x9E3779B9);
+  const idx = RARITY_ORDER.indexOf(card.rarity);
 
-  // night sky gradient
-  for (let y = 0; y < S; y++) {
-    ctx.fillStyle = y < 10 ? '#07050f' : (y < 20 ? '#0d0a1f' : (y < HORIZON ? pal[3] : '#0a0714'));
-    ctx.fillRect(0, y, S, 1);
+  // base + tinted dither
+  ctx.fillStyle = '#14101d';
+  ctx.fillRect(0, 0, CARD_W, CARD_H);
+  ctx.fillStyle = fDark;
+  for (let y = 0; y < CARD_H; y += 2)
+    for (let x = (y % 4 === 0 ? 0 : 2); x < CARD_W; x += 4) ctx.fillRect(x, y, 1, 1);
+
+  // metal frame: outer dark, mid band, inner light edge
+  ctx.fillStyle = '#07050f';
+  ctx.fillRect(0, 0, CARD_W, 1); ctx.fillRect(0, CARD_H - 1, CARD_W, 1);
+  ctx.fillRect(0, 0, 1, CARD_H); ctx.fillRect(CARD_W - 1, 0, 1, CARD_H);
+  ctx.fillStyle = fMid;
+  ctx.fillRect(1, 1, CARD_W - 2, 1); ctx.fillRect(1, CARD_H - 2, CARD_W - 2, 1);
+  ctx.fillRect(1, 1, 1, CARD_H - 2); ctx.fillRect(CARD_W - 2, 1, 1, CARD_H - 2);
+  ctx.fillStyle = fLight;
+  ctx.fillRect(1, 1, CARD_W - 2, 1);
+  ctx.fillRect(1, 1, 1, 12);
+  // frame corner studs
+  ctx.fillStyle = fLight;
+  [[2, 2], [CARD_W - 4, 2], [2, CARD_H - 4], [CARD_W - 4, CARD_H - 4]].forEach(([x, y]) =>
+    ctx.fillRect(x, y, 2, 2));
+
+  // name plate (two lines)
+  ctx.fillStyle = '#0a0714';
+  ctx.fillRect(3, 3, CARD_W - 6, 13);
+  ctx.fillStyle = fMid;
+  ctx.fillRect(3, 15, CARD_W - 6, 1);
+  const [n1, n2] = card.name.split(' ');
+  drawText(ctx, n1, Math.floor((CARD_W - textW(n1)) / 2), 4, '#eef2ff');
+  drawText(ctx, n2 || '', Math.floor((CARD_W - textW(n2 || '')) / 2), 10, pal[0]);
+
+  // ---- art window: synthwave scene ----
+  const HZ = ART.y + 21;   // horizon line
+  for (let y = ART.y; y < ART.y + ART.h; y++) {
+    ctx.fillStyle = y < ART.y + 6 ? '#07050f' : (y < ART.y + 13 ? '#0d0a1f' : (y < HZ ? pal[3] : '#0a0714'));
+    ctx.fillRect(ART.x, y, ART.w, 1);
   }
-  // stars
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 14; i++) {  // stars
     ctx.fillStyle = rnd() < 0.6 ? '#ffffff' : pal[0];
-    ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * (HORIZON - 4)), 1, 1);
+    ctx.fillRect(ART.x + Math.floor(rnd() * ART.w), ART.y + Math.floor(rnd() * 16), 1, 1);
   }
-  // striped sun rising behind the horizon
-  const cx = 24, r = 10;
-  for (let dy = -r; dy <= 0; dy++) {
-    const y = HORIZON + dy;
-    if ((dy > -5) && (dy % 2 === 0)) continue;   // synth-sun gap stripes
-    const half = Math.floor(Math.sqrt(r * r - dy * dy));
-    ctx.fillStyle = dy < -6 ? pal[0] : pal[1];
-    ctx.fillRect(cx - half, y, half * 2, 1);
+  // striped sun
+  const scx = ART.x + ART.w / 2, sr = 9;
+  for (let dy = -sr; dy <= 0; dy++) {
+    if (dy > -4 && dy % 2 === 0) continue;
+    const half = Math.floor(Math.sqrt(sr * sr - dy * dy));
+    ctx.fillStyle = dy < -5 ? pal[0] : pal[1];
+    ctx.fillRect(scx - half, HZ + dy, half * 2, 1);
   }
-  // glowing horizon line
   ctx.fillStyle = pal[0];
-  ctx.fillRect(0, HORIZON, S, 1);
-  // perspective grid floor
+  ctx.fillRect(ART.x, HZ, ART.w, 1);
+  // grid floor
   ctx.fillStyle = pal[2];
-  [33, 37, 42].forEach(y => ctx.fillRect(0, y, S, 1));
+  [HZ + 3, HZ + 7, HZ + 12, HZ + 18].forEach(y => {
+    if (y < ART.y + ART.h) ctx.fillRect(ART.x, y, ART.w, 1);
+  });
   for (let i = -2; i <= 2; i++) {
-    for (let y = HORIZON + 1; y < S; y++) {
-      const x = 24 + i * (y - HORIZON);
-      if (x >= 0 && x < S) ctx.fillRect(x, y, 1, 1);
-    }
-  }
-  // sparkle field for epic+
-  if (card.rarity === 'epic' || card.rarity === 'legendary') {
-    for (let i = 0; i < 18; i++) {
-      ctx.fillStyle = rnd() < 0.5 ? pal[0] : '#ffffff';
-      ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 1, 1);
+    for (let y = HZ + 1; y < ART.y + ART.h; y++) {
+      const x = scx + i * (y - HZ);
+      if (x >= ART.x && x < ART.x + ART.w) ctx.fillRect(x, y, 1, 1);
     }
   }
 
-  // mirrored creature sprite, 14x14 cells at 2x scale, centered
-  const G = 14, scale = 2;
-  const off = Math.floor((S - G * scale) / 2);
+  // creature sprite, 14x14 mirrored at 3x — big and chunky
+  const G = 14, sc = 3;
+  const ox = ART.x + Math.floor((ART.w - G * sc) / 2);
+  const oy = ART.y + Math.floor((ART.h - G * sc) / 2) + 1;
   const srnd = mulberry32(card.seed);
-  // dark halo behind the creature so it pops off the scene
-  ctx.fillStyle = 'rgba(5,3,12,0.75)';
-  ctx.fillRect(off - 2, off - 2, G * scale + 4, G * scale + 4);
-  for (let y = 0; y < G; y++) {
-    for (let x = 0; x < Math.ceil(G / 2); x++) {
+  ctx.fillStyle = 'rgba(5,3,12,0.7)';
+  ctx.fillRect(ox - 2, oy - 2, G * sc + 4, G * sc + 4);
+  for (let y = 0; y < G; y++)
+    for (let x = 0; x < Math.ceil(G / 2); x++)
       if (srnd() < 0.46) {
         ctx.fillStyle = pal[Math.floor(srnd() * 3)];
-        ctx.fillRect(off + x * scale, off + y * scale, scale, scale);
-        ctx.fillRect(off + (G - 1 - x) * scale, off + y * scale, scale, scale);
+        ctx.fillRect(ox + x * sc, oy + y * sc, sc, sc);
+        ctx.fillRect(ox + (G - 1 - x) * sc, oy + y * sc, sc, sc);
       }
+  ctx.fillStyle = card.rarity === 'legendary' ? '#fff7d6' : '#ffffff';
+  ctx.fillRect(ox + 12, oy + 12, sc, sc);
+  ctx.fillRect(ox + G * sc - 12 - sc, oy + 12, sc, sc);
+
+  // art window frame
+  ctx.fillStyle = fMid;
+  ctx.fillRect(ART.x - 1, ART.y - 1, ART.w + 2, 1);
+  ctx.fillRect(ART.x - 1, ART.y + ART.h, ART.w + 2, 1);
+  ctx.fillRect(ART.x - 1, ART.y - 1, 1, ART.h + 2);
+  ctx.fillRect(ART.x + ART.w, ART.y - 1, 1, ART.h + 2);
+
+  // ---- stats bar ----
+  const PWR = 10 + Math.floor(mulberry32(card.seed ^ 0xBEEF)() * 29) * 10;
+  // rarity gems
+  for (let g = 0; g <= idx; g++) {
+    const gx = 6 + g * 6, gy = 65;
+    ctx.fillStyle = pal[1];
+    ctx.fillRect(gx + 1, gy, 1, 1); ctx.fillRect(gx, gy + 1, 3, 1); ctx.fillRect(gx + 1, gy + 2, 1, 1);
+    ctx.fillStyle = pal[0];
+    ctx.fillRect(gx + 1, gy + 1, 1, 1);
+  }
+  const pwrTxt = `PWR ${PWR}`;
+  drawText(ctx, pwrTxt, CARD_W - 5 - textW(pwrTxt), 64, '#eef2ff');
+  ctx.fillStyle = fMid;
+  ctx.fillRect(4, 71, CARD_W - 8, 1);
+  drawText(ctx, RARITIES[card.rarity].label, 6, 75, pal[1]);
+  drawText(ctx, 'PLX', CARD_W - 5 - textW('PLX'), 75, fMid);
+  drawText(ctx, '2086', 6, 82, '#3d4458');
+  // set gem
+  ctx.fillStyle = fLight;
+  ctx.fillRect(CARD_W - 9, 82, 4, 4);
+  ctx.fillStyle = fDark;
+  ctx.fillRect(CARD_W - 8, 83, 2, 2);
+
+  // baked glitter on epic+
+  if (idx >= 3) {
+    for (let i = 0; i < 30; i++) {
+      ctx.fillStyle = rnd() < 0.5 ? '#ffffff' : pal[0];
+      ctx.fillRect(1 + Math.floor(rnd() * (CARD_W - 2)), 1 + Math.floor(rnd() * (CARD_H - 2)), 1, 1);
     }
   }
-  // eyes — always symmetric, always glowing
-  const ey = off + 8, ex = off + 8;
-  ctx.fillStyle = card.rarity === 'legendary' ? '#fff7d6' : '#ffffff';
-  ctx.fillRect(ex, ey, 2, 2);
-  ctx.fillRect(S - ex - 2, ey, 2, 2);
-
-  // neon corner brackets instead of a full frame
-  ctx.fillStyle = pal[1];
-  const B = 6;
-  ctx.fillRect(0, 0, B, 1);         ctx.fillRect(S - B, 0, B, 1);
-  ctx.fillRect(0, S - 1, B, 1);     ctx.fillRect(S - B, S - 1, B, 1);
-  ctx.fillRect(0, 0, 1, B);         ctx.fillRect(S - 1, 0, 1, B);
-  ctx.fillRect(0, S - B, 1, B);     ctx.fillRect(S - 1, S - B, 1, B);
 }
 
-/* Build a DOM element for a card (used in reveal + collection). */
+/* Build a DOM element for a card (used in reveal + collection).
+   Pokemon-style holo layers by rarity:
+   - rare:      holo ART WINDOW (classic holo rare)
+   - epic:      galaxy foil over the whole card (reverse-holo vibes)
+   - legendary: full rainbow foil + sweeping light beam + sparkles */
 function buildCardEl(card, { faceUp = false } = {}) {
   const el = document.createElement('div');
   el.className = `game-card r-${card.rarity}` + (faceUp ? ' flipped' : '');
@@ -129,19 +227,18 @@ function buildCardEl(card, { faceUp = false } = {}) {
   front.className = 'card-face card-front';
   const art = document.createElement('canvas');
   art.className = 'card-art';
-  drawCardArt(art, card);
-  const name = document.createElement('div');
-  name.className = 'card-name';
-  name.textContent = card.name;
-  const rar = document.createElement('div');
-  rar.className = 'card-rarity';
-  rar.textContent = RARITIES[card.rarity].label;
-  front.append(art, name, rar);
-  if (RARITY_ORDER.indexOf(card.rarity) >= 2) {
-    const holo = document.createElement('div');
-    holo.className = 'holo-overlay';
-    front.appendChild(holo);
-  }
+  drawCardFace(art, card);
+  front.appendChild(art);
+
+  const addLayer = cls => {
+    const d = document.createElement('div');
+    d.className = 'holo ' + cls;
+    front.appendChild(d);
+  };
+  if (card.rarity === 'rare') addLayer('holo-art');
+  if (card.rarity === 'epic') { addLayer('holo-galaxy'); addLayer('sparkles'); }
+  if (card.rarity === 'legendary') { addLayer('holo-full'); addLayer('beam'); addLayer('sparkles'); }
+
   const back = document.createElement('div');
   back.className = 'card-face card-back-face';
   el.append(front, back);

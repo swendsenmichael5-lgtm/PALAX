@@ -1,5 +1,6 @@
 /* ============================================================
-   PALAX — midnight arcade / synthwave CRT theme
+   PALAX — midnight arcade theme, full pixel-art chrome,
+   Pokemon-style holo foils per rarity.
    ============================================================ */
 
 :root {
@@ -21,6 +22,12 @@
   --c-rare: #4f9dde;
   --c-epic: #b06ae8;
   --c-legendary: #f9c80e;
+  /* pixel-notched corners, used on all UI chrome */
+  --px: polygon(
+    0 6px, 6px 6px, 6px 0,
+    calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px));
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -72,7 +79,6 @@ html, body {
 }
 @keyframes gridScroll { to { background-position: 0 0, 0 34px, 0 0; } }
 
-/* CRT scanlines + vignette above the app */
 #scanlines {
   position: fixed; inset: 0;
   background:
@@ -127,67 +133,62 @@ html, body {
   margin-left: auto;
   display: flex; align-items: center; gap: 8px;
   background: var(--panel);
-  border: 2px solid var(--cyan-dark);
-  border-radius: 4px;
-  padding: 8px 13px;
+  clip-path: var(--px);
+  padding: 10px 14px;
   font-size: 12px;
-  box-shadow: 0 0 10px rgba(45,226,230,0.25), inset 0 0 12px rgba(0,0,0,0.5);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -4px 0 rgba(0,0,0,0.45),
+              inset 0 0 0 2px var(--cyan-dark);
 }
 .coins-pill.bump { animation: coinBump 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes coinBump { 35% { transform: scale(1.22); } }
 .coin-icon {
   display: inline-block;
-  width: 13px; height: 13px;
-  background: radial-gradient(circle at 35% 30%, #fff3c4, var(--yellow) 55%, var(--yellow-dark));
-  border: 2px solid var(--yellow-dark);
-  border-radius: 50%;
-  box-shadow: 0 0 9px rgba(249,200,14,0.7);
+  width: 12px; height: 12px;
+  background: var(--yellow);
+  box-shadow:
+    inset 2px 2px 0 #fff3c4, inset -2px -2px 0 var(--yellow-dark),
+    0 0 8px rgba(249,200,14,0.7);
 }
 .icon-btn {
   background: var(--panel);
-  border: 2px solid var(--cyan-dark);
-  border-radius: 4px;
+  border: none;
+  clip-path: var(--px);
   color: var(--cyan);
   font-size: 14px;
-  padding: 7px 11px;
+  padding: 9px 12px;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(45,226,230,0.2);
+  box-shadow: inset 0 0 0 2px var(--cyan-dark), inset 0 -4px 0 rgba(0,0,0,0.45);
 }
-.icon-btn.muted { color: #4a5568; border-color: #2a3242; box-shadow: none; text-decoration: line-through; }
+.icon-btn.muted { color: #4a5568; box-shadow: inset 0 0 0 2px #2a3242; text-decoration: line-through; }
 
 /* ---------------- top tab bar ---------------- */
 #navbar {
   display: flex;
+  gap: 6px;
   margin: 4px 14px 8px;
-  background: var(--panel);
-  border: 2px solid var(--panel-edge);
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
 }
 .nav-btn {
   flex: 1;
   font-family: inherit;
   font-size: 7px;
   color: #5f6c8a;
-  background: none;
+  background: var(--panel);
   border: none;
-  border-right: 2px solid var(--panel-edge);
-  padding: 10px 4px;
+  clip-path: var(--px);
+  padding: 11px 4px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  transition: color 0.15s, background 0.2s;
+  box-shadow: inset 0 0 0 2px var(--panel-edge), inset 0 -4px 0 rgba(0,0,0,0.4);
+  transition: color 0.15s;
 }
-.nav-btn:last-child { border-right: none; }
 .nav-ico { font-size: 12px; }
 .nav-btn.active {
   color: var(--bg-deep);
-  background: linear-gradient(180deg, var(--cyan), var(--cyan-dark));
-  text-shadow: none;
-  box-shadow: 0 0 16px rgba(45,226,230,0.55), inset 0 2px 0 rgba(255,255,255,0.45);
+  background: var(--cyan);
+  box-shadow: inset 0 3px 0 #aef7f8, inset 0 -4px 0 var(--cyan-dark);
 }
 .nav-btn.active .nav-ico { animation: navBounce 0.3s ease; }
 @keyframes navBounce { 50% { transform: translateY(-4px); } }
@@ -222,39 +223,40 @@ html, body {
   margin-bottom: 14px;
 }
 
-/* ---------------- buttons ---------------- */
+/* ---------------- pixel buttons ---------------- */
 .big-btn {
   position: relative;
   font-family: inherit;
   font-size: 11px;
   color: var(--bg-deep);
-  background: linear-gradient(180deg, #7df3f6, var(--cyan) 55%, var(--cyan-dark));
+  background: var(--cyan);
   border: none;
-  border-radius: 4px;
-  padding: 14px 22px;
+  clip-path: var(--px);
+  padding: 16px 24px;
   cursor: pointer;
-  box-shadow: 0 0 16px rgba(45,226,230,0.4), 0 5px 0 var(--cyan-dark), inset 0 2px 0 rgba(255,255,255,0.5);
-  text-shadow: 1px 1px 0 rgba(255,255,255,0.25);
-  transition: transform 0.06s, box-shadow 0.06s, filter 0.15s;
+  box-shadow: inset 0 4px 0 #aef7f8, inset 0 -6px 0 var(--cyan-dark);
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.3);
+  transition: filter 0.15s;
 }
 .big-btn:hover:not(:disabled) { filter: brightness(1.12); }
 .big-btn:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: 0 0 10px rgba(45,226,230,0.3), 0 1px 0 var(--cyan-dark);
+  transform: translateY(3px);
+  box-shadow: inset 0 2px 0 #aef7f8, inset 0 -2px 0 var(--cyan-dark);
 }
 .big-btn:disabled { filter: grayscale(0.85) brightness(0.55); cursor: default; }
 .gold-btn {
-  background: linear-gradient(180deg, #ffe27d, var(--yellow) 55%, var(--yellow-dark));
-  box-shadow: 0 0 16px rgba(249,200,14,0.45), 0 5px 0 var(--yellow-dark), inset 0 2px 0 rgba(255,255,255,0.5);
+  background: var(--yellow);
+  box-shadow: inset 0 4px 0 #fff3c4, inset 0 -6px 0 var(--yellow-dark);
 }
-.gold-btn:active:not(:disabled) { box-shadow: 0 0 10px rgba(249,200,14,0.3), 0 1px 0 var(--yellow-dark); }
+.gold-btn:active:not(:disabled) { box-shadow: inset 0 2px 0 #fff3c4, inset 0 -2px 0 var(--yellow-dark); }
 .danger-btn {
-  background: linear-gradient(180deg, #ff7d9b, var(--magenta) 55%, var(--magenta-dark));
+  background: var(--magenta);
   color: #fff;
   text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
-  box-shadow: 0 0 16px rgba(255,56,100,0.45), 0 5px 0 var(--magenta-dark), inset 0 2px 0 rgba(255,255,255,0.35);
+  box-shadow: inset 0 4px 0 #ff7d9b, inset 0 -6px 0 var(--magenta-dark);
 }
-.danger-btn:active:not(:disabled) { box-shadow: 0 0 10px rgba(255,56,100,0.3), 0 1px 0 var(--magenta-dark); }
+.danger-btn:active:not(:disabled) { box-shadow: inset 0 2px 0 #ff7d9b, inset 0 -2px 0 var(--magenta-dark); }
+
 /* ---------------- the one pack ---------------- */
 .pack-stage {
   width: 220px;
@@ -283,7 +285,6 @@ html, body {
   display: block;
   image-rendering: pixelated;
 }
-/* CRT scan beam sweeping down the pack */
 .pack-holo::after {
   content: '';
   position: absolute; inset: 0;
@@ -306,7 +307,7 @@ html, body {
 .pack-info .p-name { font-size: 11px; color: var(--text); text-shadow: 2px 2px 0 #000; }
 .pack-info .p-meta { font-size: 7px; color: #aab4d4; }
 .pack-info .p-odds { font-size: 7px; }
-.buy-main { font-size: 12px; padding: 15px 38px; }
+.buy-main { font-size: 12px; padding: 17px 40px; }
 .pity-hint { font-size: 7px; color: #6f7da0; margin-top: 18px; line-height: 2; text-align: center; }
 
 /* ---------------- pack opening overlay ---------------- */
@@ -419,7 +420,7 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
 
 body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 
-/* ---------------- the revealed card ---------------- */
+/* ---------------- cards (full pixel art, 64x90 logical) ---------------- */
 .card-row {
   display: flex;
   flex-wrap: wrap;
@@ -430,7 +431,6 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   z-index: 3;
 }
 
-/* wrapper handles the pop-out; inner card handles the spin */
 .pop-wrap {
   perspective: 1000px;
   animation: popOut 0.65s cubic-bezier(0.2, 1.35, 0.4, 1) both;
@@ -438,67 +438,32 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 @keyframes popOut {
   from { transform: translateY(170px) scale(0.1); opacity: 0; filter: brightness(4); }
 }
-.big-reveal { width: 196px; height: 274px; }
-.big-reveal .card-name { font-size: 9px; min-height: 34px; padding: 9px 4px 2px; }
-.big-reveal .card-rarity { font-size: 8px; padding-bottom: 9px; letter-spacing: 2px; }
 
-/* white-hot mystery covers while the card spins — one per side,
-   pushed off the card plane so 3D rendering can't z-fight them */
-.mystery-cover {
-  position: absolute; inset: 0;
-  border-radius: 5px;
-  backface-visibility: hidden;
-  transform: translateZ(3px);
-  background: radial-gradient(circle at 50% 36%, #ffffff, #e2f7ff 55%, #8fd8ff 100%);
-  box-shadow:
-    0 0 30px rgba(255,255,255,0.95),
-    0 0 80px rgba(160,220,255,0.75),
-    0 0 160px rgba(120,200,255,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: coverPulse 0.45s ease-in-out infinite;
-  transition: opacity 0.16s ease;
-}
-.mystery-cover::after {
-  content: '?';
-  font-size: 44px;
-  color: rgba(40, 80, 140, 0.3);
-  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
-}
-.mystery-cover.back { transform: rotateY(180deg) translateZ(3px); }
-.mystery-cover.off { opacity: 0; pointer-events: none; }
-@keyframes coverPulse { 50% { filter: brightness(1.3); } }
 .game-card {
-  width: 96px; height: 134px;
+  width: 96px; height: 135px;
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.5s cubic-bezier(0.3, 1.5, 0.5, 1);
   transform: rotateX(180deg);
   cursor: pointer;
 }
-.game-card.spawn { animation: cardSpawn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
-@keyframes cardSpawn {
-  from { transform: rotateX(180deg) translateY(180px); opacity: 0; filter: brightness(3); }
-}
 .game-card.flipped { transform: rotateX(0deg); }
+.big-reveal { width: 192px; height: 270px; }
+
 .card-face {
   position: absolute; inset: 0;
   backface-visibility: hidden;
-  border-radius: 5px;
   overflow: hidden;
 }
-.card-front {
-  background: linear-gradient(180deg, var(--panel-hi), var(--panel) 60%);
-  border: 3px solid var(--panel-edge);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.card-front { background: #14101d; }
+.card-art {
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
+  display: block;
 }
 .card-back-face {
   transform: rotateX(180deg);
-  background:
-    repeating-linear-gradient(45deg, #1d1538 0 8px, #140e28 8px 16px);
+  background: repeating-linear-gradient(45deg, #1d1538 0 8px, #140e28 8px 16px);
   border: 3px solid var(--cyan-dark);
   display: flex; align-items: center; justify-content: center;
   box-shadow: inset 0 0 22px rgba(0,0,0,0.6), 0 0 12px rgba(45,226,230,0.25);
@@ -507,7 +472,6 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   content: '';
   position: absolute; inset: 6px;
   border: 2px solid rgba(45,226,230,0.45);
-  border-radius: 3px;
 }
 .card-back-face::after {
   content: 'P';
@@ -515,17 +479,8 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   color: var(--cyan);
   text-shadow: 0 0 14px rgba(45,226,230,0.9), 3px 3px 0 #000;
 }
-.card-art { width: 100%; image-rendering: pixelated; display: block; }
-.card-name {
-  font-size: 6px;
-  text-align: center;
-  padding: 4px 2px 2px;
-  line-height: 1.5;
-  min-height: 22px;
-}
-.card-rarity { font-size: 5px; padding-bottom: 4px; letter-spacing: 1px; }
 
-/* glitch-scan sweep on every flip */
+/* scan sweep on flip */
 .game-card.flipped .card-front::before {
   content: '';
   position: absolute; inset: 0;
@@ -534,57 +489,110 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   animation: revealScan 0.7s ease 0.18s both;
   mix-blend-mode: screen;
   pointer-events: none;
-  z-index: 2;
+  z-index: 4;
 }
 @keyframes revealScan {
   from { background-position: 0 -120%; }
   to { background-position: 0 220%; }
 }
 
-/* holo film on rare+ */
-.holo-overlay {
+/* ============ Pokemon-style holo foils ============ */
+.holo {
   position: absolute; inset: 0;
   pointer-events: none;
-  mix-blend-mode: screen;
-  background:
+  z-index: 3;
+  background-position: var(--hx, 50%) var(--hy, 50%);
+}
+
+/* RARE — the art window itself is holographic (classic holo rare).
+   Clip matches the canvas art window: x4..60 of 64, y17..61 of 90 */
+.holo-art {
+  clip-path: inset(18.9% 6.25% 32.2% 6.25%);
+  background-image: linear-gradient(115deg,
+    transparent 18%, rgba(255,60,160,0.65) 32%, rgba(60,255,220,0.65) 45%,
+    rgba(120,140,255,0.6) 55%, rgba(255,230,80,0.55) 68%, transparent 82%);
+  background-size: 260% 260%;
+  mix-blend-mode: color-dodge;
+  opacity: 0.8;
+  animation: holoDrift 4s ease-in-out infinite alternate;
+}
+
+/* EPIC — galaxy foil across the whole card (reverse-holo vibes) */
+.holo-galaxy {
+  background-image:
+    repeating-radial-gradient(circle at 30% 25%,
+      rgba(176,106,232,0.5) 0 2px, rgba(45,226,230,0.4) 2px 4px, transparent 4px 8px),
     linear-gradient(120deg,
-      rgba(255, 56, 100, 0.22), rgba(45, 226, 230, 0.24) 30%,
-      rgba(123, 47, 190, 0.22) 55%, rgba(249, 200, 14, 0.2) 80%,
-      rgba(255, 56, 100, 0.22));
+      rgba(255,60,160,0.4), rgba(60,200,255,0.4) 40%, rgba(255,230,80,0.32) 75%, rgba(255,60,160,0.4));
+  background-size: 14px 14px, 280% 280%;
+  mix-blend-mode: color-dodge;
+  opacity: 0.62;
+  animation: holoDrift 3.6s ease-in-out infinite alternate;
+}
+
+/* LEGENDARY — full-card rainbow foil */
+.holo-full {
+  background-image:
+    linear-gradient(110deg,
+      rgba(255,60,60,0.55) 0%, rgba(255,180,40,0.55) 18%, rgba(255,250,90,0.5) 33%,
+      rgba(80,255,160,0.5) 48%, rgba(60,200,255,0.55) 64%, rgba(170,90,255,0.55) 82%,
+      rgba(255,60,60,0.55) 100%),
+    radial-gradient(circle at var(--hx, 50%) var(--hy, 35%), rgba(255,255,255,0.5), transparent 55%);
+  background-size: 300% 300%, 100% 100%;
+  mix-blend-mode: color-dodge;
+  opacity: 0.7;
+  animation: holoDrift 3s ease-in-out infinite alternate;
+}
+@keyframes holoDrift {
+  from { background-position: 15% 20%; }
+  to { background-position: 85% 80%; }
+}
+
+/* sweeping light beam (legendary) */
+.beam {
+  background-image: linear-gradient(120deg,
+    transparent 38%, rgba(255,255,255,0.55) 49%, rgba(255,255,255,0.18) 53%, transparent 64%);
   background-size: 320% 320%;
-  animation: holoShift 3.6s linear infinite;
-  opacity: 0.55;
-  z-index: 1;
+  mix-blend-mode: screen;
+  animation: beamSweep 2.6s ease-in-out infinite;
 }
-.r-rare .holo-overlay { opacity: 0.3; }
-.r-legendary .holo-overlay { opacity: 0.85; animation-duration: 2.2s; }
-@keyframes holoShift {
-  from { background-position: 0% 0%; }
-  to { background-position: 300% 100%; }
+@keyframes beamSweep {
+  0% { background-position: 120% 0; }
+  55%, 100% { background-position: -140% 0; }
 }
 
-/* rarity colors + neon glows */
-.r-common    .card-rarity { color: var(--c-common); }
-.r-uncommon  .card-rarity { color: var(--c-uncommon); }
-.r-rare      .card-rarity { color: var(--c-rare); }
-.r-epic      .card-rarity { color: var(--c-epic); }
-.r-legendary .card-rarity { color: var(--c-legendary); }
-
-.r-uncommon  .card-front { border-color: #2c7544; box-shadow: 0 0 10px rgba(86,194,113,0.4); }
-.r-rare      .card-front { border-color: #2c5e8f; box-shadow: 0 0 16px rgba(79,157,222,0.65); }
-.r-epic      .card-front { border-color: #6f3e99; box-shadow: 0 0 24px rgba(176,106,232,0.8); }
-.r-legendary .card-front {
-  border-color: var(--yellow-dark);
-  animation: legendPulse 1.5s ease-in-out infinite;
+/* glitter dots that twinkle in steps, like foil flecks */
+.sparkles {
+  background-image:
+    radial-gradient(1px 1px at 18% 22%, #fff, transparent),
+    radial-gradient(1px 1px at 72% 14%, #fff, transparent),
+    radial-gradient(2px 2px at 86% 38%, #fff, transparent),
+    radial-gradient(1px 1px at 34% 48%, #fff, transparent),
+    radial-gradient(1px 1px at 58% 66%, #fff, transparent),
+    radial-gradient(2px 2px at 12% 76%, #fff, transparent),
+    radial-gradient(1px 1px at 80% 84%, #fff, transparent),
+    radial-gradient(1px 1px at 46% 90%, #fff, transparent);
+  mix-blend-mode: screen;
+  animation: sparkleTwinkle 1.6s steps(2) infinite;
 }
+@keyframes sparkleTwinkle {
+  0%, 100% { opacity: 0.9; transform: translate(0, 0); }
+  50% { opacity: 0.25; transform: translate(1px, 1px); }
+}
+
+/* rarity glows */
+.r-uncommon  .card-front { box-shadow: 0 0 10px rgba(86,194,113,0.4); }
+.r-rare      .card-front { box-shadow: 0 0 16px rgba(79,157,222,0.65); }
+.r-epic      .card-front { box-shadow: 0 0 24px rgba(176,106,232,0.8); }
+.r-legendary .card-front { animation: legendPulse 1.5s ease-in-out infinite; }
 @keyframes legendPulse {
   0%, 100% { box-shadow: 0 0 22px rgba(249,200,14,0.7); }
   50% { box-shadow: 0 0 46px rgba(249,200,14,1), 0 0 95px rgba(249,200,14,0.5); }
 }
 
-/* reveal jolts: epic glitches, legendary erupts */
+/* reveal jolts */
 .game-card.flipped.r-rare      { animation: rareJolt 0.45s ease; }
-.game-card.flipped.r-epic      { animation: epicGlitch 0.55s steps(2) ; }
+.game-card.flipped.r-epic      { animation: epicGlitch 0.55s steps(2); }
 .game-card.flipped.r-legendary { animation: legendJolt 0.8s ease; }
 @keyframes rareJolt { 30% { transform: rotateX(0) scale(1.14); } }
 @keyframes epicGlitch {
@@ -599,6 +607,33 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   65% { transform: rotateX(0) scale(1.28) translate(3px, 0); }
 }
 
+/* mystery covers — off the card's 3D plane so they can't z-fight */
+.mystery-cover {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  transform: translateZ(3px);
+  background: radial-gradient(circle at 50% 36%, #ffffff, #e2f7ff 55%, #8fd8ff 100%);
+  box-shadow:
+    0 0 30px rgba(255,255,255,0.95),
+    0 0 80px rgba(160,220,255,0.75),
+    0 0 160px rgba(120,200,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: coverPulse 0.45s ease-in-out infinite;
+  transition: opacity 0.16s ease;
+  z-index: 6;
+}
+.mystery-cover::after {
+  content: '?';
+  font-size: 44px;
+  color: rgba(40, 80, 140, 0.3);
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+}
+.mystery-cover.back { transform: rotateY(180deg) translateZ(3px); }
+.mystery-cover.off { opacity: 0; pointer-events: none; }
+@keyframes coverPulse { 50% { filter: brightness(1.3); } }
+
 /* ---------------- minigame ---------------- */
 .duel-table {
   display: flex;
@@ -611,20 +646,18 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 .duel-vs { font-size: 14px; color: var(--magenta); text-shadow: 0 0 12px rgba(255,56,100,0.8), 2px 2px 0 #000; }
 .duel-card {
   width: 84px; height: 118px;
-  border-radius: 5px;
-  background: linear-gradient(180deg, #f4f6ff, #d8dcf0);
-  border: 3px solid #0a0714;
+  clip-path: var(--px);
+  background: #f4f6ff;
   color: #16121f;
   display: flex; align-items: center; justify-content: center;
   font-size: 30px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 0 3px #0a0714, inset 0 -6px 0 rgba(0,0,0,0.15);
 }
 .duel-card.red-suit { color: var(--magenta-dark); }
 .duel-card.back {
   background: repeating-linear-gradient(45deg, #1d1538 0 8px, #140e28 8px 16px);
   color: transparent;
-  border-color: var(--cyan-dark);
-  box-shadow: inset 0 0 18px rgba(0,0,0,0.55), 0 0 12px rgba(45,226,230,0.3);
+  box-shadow: inset 0 0 0 3px var(--cyan-dark), inset 0 0 18px rgba(0,0,0,0.55);
 }
 .duel-card.pop { animation: duelPop 0.38s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes duelPop { from { transform: scale(0.4) rotate(10deg); } }
@@ -634,13 +667,14 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 .bet-btn {
   font-family: inherit; font-size: 9px;
   color: var(--bg-deep);
-  background: linear-gradient(180deg, #7df3f6, var(--cyan) 55%, var(--cyan-dark));
-  border: none; border-radius: 4px;
-  padding: 12px 14px; cursor: pointer;
-  box-shadow: 0 0 12px rgba(45,226,230,0.35), 0 4px 0 var(--cyan-dark), inset 0 2px 0 rgba(255,255,255,0.5);
+  background: var(--cyan);
+  border: none;
+  clip-path: var(--px);
+  padding: 13px 15px; cursor: pointer;
+  box-shadow: inset 0 3px 0 #aef7f8, inset 0 -5px 0 var(--cyan-dark);
 }
 .bet-btn:hover:not(:disabled) { filter: brightness(1.12); }
-.bet-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--cyan-dark); }
+.bet-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 -2px 0 var(--cyan-dark); }
 .bet-btn:disabled { filter: grayscale(0.85) brightness(0.55); }
 .duel-msg { font-size: 9px; margin-top: 16px; min-height: 16px; text-align: center; color: var(--yellow); text-shadow: 0 0 10px rgba(249,200,14,0.6), 2px 2px 0 #000; line-height: 1.8; }
 .best-streak { font-size: 8px; color: #6f7da0; margin-top: 14px; }
@@ -650,7 +684,7 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 96px);
-  gap: 16px;
+  gap: 18px 16px;
   justify-content: center;
   width: 100%;
 }
@@ -659,9 +693,8 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 .coll-count {
   position: absolute;
   top: -7px; right: -7px;
-  background: linear-gradient(180deg, #ff7d9b, var(--magenta));
+  background: var(--magenta);
   border: 2px solid #fff;
-  border-radius: 50%;
   font-size: 7px;
   min-width: 21px; height: 21px;
   display: flex; align-items: center; justify-content: center;
@@ -672,13 +705,12 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
 .mini-btn {
   font-family: inherit; font-size: 6px;
   color: var(--bg-deep);
-  background: linear-gradient(180deg, #7df3f6, var(--cyan) 55%, var(--cyan-dark));
-  border: none; border-radius: 3px;
-  padding: 6px 8px; cursor: pointer;
-  box-shadow: 0 3px 0 var(--cyan-dark);
+  background: var(--cyan);
+  border: none;
+  padding: 7px 9px; cursor: pointer;
+  box-shadow: inset 0 2px 0 #aef7f8, inset 0 -3px 0 var(--cyan-dark);
 }
-.mini-btn.sell { background: linear-gradient(180deg, #ffe27d, var(--yellow) 55%, var(--yellow-dark)); box-shadow: 0 3px 0 var(--yellow-dark); }
-.mini-btn:active { transform: translateY(2px); box-shadow: none; }
+.mini-btn:active { transform: translateY(2px); box-shadow: inset 0 -1px 0 var(--cyan-dark); }
 .empty-note { font-size: 8px; color: #6f7da0; grid-column: 1 / -1; text-align: center; line-height: 2.2; padding: 34px 0; }
 
 .trade-redeem { display: flex; gap: 8px; width: 100%; max-width: 400px; margin-bottom: 8px; }
@@ -687,29 +719,28 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   font-family: inherit;
   font-size: 8px;
   background: var(--bg-deep);
-  border: 2px solid var(--cyan-dark);
-  border-radius: 4px;
+  border: none;
+  clip-path: var(--px);
   color: var(--cyan);
-  padding: 10px;
+  padding: 12px;
   min-width: 0;
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 0 2px var(--cyan-dark), inset 0 4px 8px rgba(0,0,0,0.5);
 }
-.trade-redeem input:focus { outline: 2px solid var(--magenta); }
-.trade-redeem .big-btn { font-size: 9px; padding: 10px 14px; }
+.trade-redeem input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--magenta), inset 0 4px 8px rgba(0,0,0,0.5); }
+.trade-redeem .big-btn { font-size: 9px; padding: 12px 16px; }
 
 /* ---------------- modal ---------------- */
 .modal-box {
-  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
-  border: 2px solid var(--cyan-dark);
-  border-radius: 6px;
-  padding: 26px;
+  background: var(--panel);
+  clip-path: var(--px);
+  padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   align-items: center;
   max-width: 340px;
   width: 90%;
-  box-shadow: 0 0 30px rgba(45,226,230,0.25), 0 18px 40px rgba(0,0,0,0.7);
+  box-shadow: inset 0 0 0 2px var(--cyan-dark), inset 0 4px 0 rgba(255,255,255,0.08);
   animation: screenIn 0.3s ease both;
 }
 .modal-box h3 { font-size: 13px; color: var(--cyan); text-shadow: 0 0 10px rgba(45,226,230,0.7), 2px 2px 0 #000; }
@@ -718,11 +749,9 @@ body.flashwhite #scanlines { background: rgba(255,255,255,0.55); }
   word-break: break-all;
   background: var(--bg-deep);
   padding: 12px;
-  border-radius: 4px;
   line-height: 1.9;
   width: 100%;
   text-align: center;
   color: var(--yellow);
-  border: 1px solid var(--panel-hi);
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+  box-shadow: inset 0 0 0 2px var(--panel-hi), inset 0 3px 8px rgba(0,0,0,0.6);
 }
