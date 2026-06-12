@@ -6,7 +6,7 @@
 <title>PALAX — Pixel Pack Ripper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 
@@ -60,12 +60,23 @@ window.onerror = function (msg, src, line) {
     <button class="nav-btn" data-screen="trade"><span class="nav-ico">&#8644;</span>TRADE</button>
   </nav>
 
-  <!-- ============ SHOP SCREEN: the one pack ============ -->
+  <!-- ============ SHOP SCREEN ============ -->
   <section id="screen-shop" class="screen active">
-    <div id="packStage" class="pack-stage"></div>
+    <div class="ribbon">&#9670; TONIGHT'S PACK &#9670;</div>
+    <div class="hero-row">
+      <div id="packStage" class="pack-stage"></div>
+      <div class="side-col">
+        <div class="side-label">LAST PULL</div>
+        <div id="lastPull" class="mini-card"></div>
+        <div id="shopStats" class="stat-chips"></div>
+      </div>
+    </div>
     <div id="packInfo" class="pack-info"></div>
     <button id="buyBtn" class="big-btn buy-main">RIP IT</button>
+    <div class="btn-caption">FREE &middot; UNLIMITED RIPS</div>
     <div class="pity-hint" id="pityHint"></div>
+    <div class="ticker"><div class="ticker-track" id="tickerTrack"></div></div>
+    <div class="ver-tag">PALAX v1.0 &middot; EST. 2086 &middot; ALL PULLS FINAL</div>
   </section>
 
   <!-- ============ MINIGAME SCREEN ============ -->
@@ -117,7 +128,7 @@ window.onerror = function (msg, src, line) {
   <div class="open-stage" id="openStage">
     <div id="stageRays"></div>
     <div id="shockwave"></div>
-    <div class="rip-hint" id="ripHint">&#9756; SWIPE ACROSS THE TOP TO RIP &#9758;</div>
+    <div class="rip-hint" id="ripHint">&gt;&gt;&gt; TEAR ACROSS THE FOIL &lt;&lt;&lt;</div>
     <div id="packWrap" class="pack-wrap">
       <canvas id="packFlap" width="48" height="18"></canvas>
       <canvas id="packBody" width="48" height="64"></canvas>
@@ -138,8 +149,8 @@ window.onerror = function (msg, src, line) {
   </div>
 </div>
 
-<script src="js/audio.js?v=12"></script>
-<script src="js/cards.js?v=12"></script>
-<script src="js/main.js?v=12"></script>
+<script src="js/audio.js?v=13"></script>
+<script src="js/cards.js?v=13"></script>
+<script src="js/main.js?v=13"></script>
 </body>
 </html>

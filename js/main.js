@@ -286,6 +286,19 @@ function buildShop() {
     `<div class="p-meta">ONE MYSTERY CARD INSIDE</div>` +
     `<div class="odds-plaque">${oddChips}</div>`;
 
+  // last pull + run stats fill the hero row
+  const lpHolder = $('lastPull');
+  lpHolder.innerHTML = '';
+  const lp = state.lastPull;
+  const lpCard = buildCardEl(lp || cardFromSeed(7, 'common'), { faceUp: !!lp });
+  if (lp) addTilt(lpCard, 9);
+  lpHolder.appendChild(lpCard);
+  const owned = state.collection.reduce((a, c) => a + c.count, 0);
+  $('shopStats').innerHTML =
+    `<span class="chip">RIPPED <b>${state.opened}</b></span>` +
+    `<span class="chip">OWNED <b>${owned}</b></span>` +
+    `<span class="chip">STREAK <b>${state.bestStreak}</b></span>`;
+
   const pips = Array.from({ length: PITY_RARE }, (_, i) =>
     `<span class="pip${i < state.sinceRare ? ' on' : ''}"></span>`).join('');
   const legendPct = Math.min(100, state.sinceLegendary / PITY_LEGENDARY * 100);
@@ -510,6 +523,8 @@ function spinReveal(card) {
       if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 120]);
     }
     addCard(card);
+    state.lastPull = { seed: card.seed, rarity: card.rarity, name: card.name };
+    save();
     addTilt(el, 12);   // tilt the fresh pull to play with its foil
     const done = $('doneBtn');
     setTimeout(() => { done.classList.remove('hidden'); done.classList.add('rise'); }, 750);
@@ -642,23 +657,34 @@ function renderCollection() {
     grid.innerHTML = '<div class="empty-note">NO CARDS YET.<br>GO RIP SOME PACKS!</div>';
     return;
   }
-  const sorted = [...state.collection].sort((a, b) =>
-    RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || a.name.localeCompare(b.name));
-  sorted.forEach((entry, i) => {
-    const holder = document.createElement('div');
-    holder.className = 'coll-card';
-    holder.style.animationDelay = (i * 35) + 'ms';
-    const cardEl = buildCardEl(entry, { faceUp: true });
-    addTilt(cardEl, 10);
-    holder.appendChild(cardEl);
-    if (entry.count > 1) {
-      const badge = document.createElement('div');
-      badge.className = 'coll-count';
-      badge.textContent = 'x' + entry.count;
-      holder.appendChild(badge);
+  // group by rarity with section dividers, best first
+  let i = 0;
+  for (const r of [...RARITY_ORDER].reverse()) {
+    const entries = state.collection
+      .filter(c => c.rarity === r)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!entries.length) continue;
+    const div = document.createElement('div');
+    div.className = 'rarity-divider';
+    div.style.color = RARITIES[r].color;
+    div.textContent = `◆ ${RARITIES[r].label} · ${entries.reduce((a, c) => a + c.count, 0)}`;
+    grid.appendChild(div);
+    for (const entry of entries) {
+      const holder = document.createElement('div');
+      holder.className = 'coll-card';
+      holder.style.animationDelay = (i++ * 35) + 'ms';
+      const cardEl = buildCardEl(entry, { faceUp: true });
+      addTilt(cardEl, 10);
+      holder.appendChild(cardEl);
+      if (entry.count > 1) {
+        const badge = document.createElement('div');
+        badge.className = 'coll-count';
+        badge.textContent = 'x' + entry.count;
+        holder.appendChild(badge);
+      }
+      grid.appendChild(holder);
     }
-    grid.appendChild(holder);
-  });
+  }
 }
 
 /* ============================================================
@@ -772,6 +798,7 @@ $('muteBtn').addEventListener('click', () => {
   state.muted = !state.muted;
   AudioEngine.setMuted(state.muted);
   $('muteBtn').classList.toggle('muted', state.muted);
+  drawMuteIcon();
   save();
 });
 
@@ -871,3 +898,75 @@ function drawNavIcons() {
   });
 }
 drawNavIcons();
+
+/* ============================================================
+   Drawn wordmark + pixel speaker icon + news ticker
+   ============================================================ */
+(function drawLogo() {
+  if (!document.querySelector) return;
+  const el = document.querySelector('.logo');
+  if (!el) return;
+  const cv = document.createElement('canvas');
+  cv.width = 33; cv.height = 9;
+  const ctx = cv.getContext('2d');
+  // crescent crest
+  for (let dy = -3; dy <= 3; dy++) {
+    const half = Math.floor(Math.sqrt(12 - dy * dy));
+    ctx.fillStyle = '#e8b54d';
+    ctx.fillRect(4 - half, 4 + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -3; dy <= 3; dy++) {
+    const half = Math.floor(Math.sqrt(12 - dy * dy));
+    ctx.fillStyle = '#11151c';
+    ctx.fillRect(5 - half + 1, 4 + dy, half * 2 || 1, 1);
+  }
+  ctx.fillStyle = '#f6e3b0';
+  ctx.fillRect(6, 2, 1, 1);
+  drawText(ctx, 'PALA', 10, 2, '#e8b54d');
+  drawText(ctx, 'X', 26, 2, '#e9dfc8');
+  el.textContent = '';
+  el.classList.add('logo-px');
+  el.appendChild(cv);
+})();
+
+const MUTE_ICON = [
+  '..#....',
+  '.##.o..',
+  '###..o.',
+  '###..o.',
+  '.##.o..',
+  '..#....',
+];
+function drawMuteIcon() {
+  const btn = $('muteBtn');
+  let cv = btn._iconCv;
+  if (!cv) {
+    cv = document.createElement('canvas');
+    btn.textContent = '';
+    btn.appendChild(cv);
+    btn._iconCv = cv;
+  }
+  cv.width = 7; cv.height = 6;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, 7, 6);
+  MUTE_ICON.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === '.') continue;
+      if (row[x] === 'o' && state.muted) continue;     // waves vanish when muted
+      ctx.fillStyle = state.muted ? '#525b6b' : '#e8b54d';
+      ctx.fillRect(x, y, 1, 1);
+    }
+  });
+  if (state.muted) {       // slash
+    ctx.fillStyle = '#d4574e';
+    for (let i = 0; i < 6; i++) ctx.fillRect(i + 1, 5 - i, 1, 1);
+  }
+}
+drawMuteIcon();
+
+(function fillTicker() {
+  const msg = 'EVERY RIP FILLS YOUR CHARMS ◆ LEGENDARY GUARANTEED BY PACK 25 ◆ ' +
+              'TILT A FOIL CARD TO CATCH THE LIGHT ◆ GIFT CODES TRADE REAL CARDS ◆ ' +
+              'DOUBLE OR NOTHING PAYS THE BOLD ◆ ';
+  $('tickerTrack').textContent = msg + msg;   // doubled for a seamless loop
+})();
