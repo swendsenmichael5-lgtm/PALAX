@@ -472,13 +472,16 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   text-shadow: 3px 3px 0 #000;
 }
 
-/* shine sweep on flip */
+/* shine sweep on flip — hard-edged band, no soft gradient */
 .game-card.flipped .card-front::before {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 30%, rgba(255,250,235,0.6) 50%, transparent 70%);
+  background: linear-gradient(115deg,
+    transparent 42%, rgba(255,250,235,0.28) 42%,
+    rgba(255,250,235,0.65) 48%, rgba(255,250,235,0.65) 54%,
+    rgba(255,250,235,0.28) 60%, transparent 60%);
   background-size: 280% 100%;
-  animation: revealSheen 0.8s ease 0.18s both;
+  animation: revealSheen 0.8s steps(14) 0.18s both;
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 4;
@@ -488,87 +491,16 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   to { background-position: -135% 0; }
 }
 
-/* ============ Pokemon-style holo foils ============ */
-.holo {
+/* ============ pixel foils ============
+   Foils are drawn on a second canvas at the card's own 64x90
+   resolution (see cards.js) — same pixel grid as the art. */
+.foil-canvas {
   position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
   pointer-events: none;
+  mix-blend-mode: screen;
   z-index: 3;
-  background-position: var(--hx, 50%) var(--hy, 50%);
-}
-
-/* RARE — holographic art window (classic holo rare) */
-.holo-art {
-  clip-path: inset(18.9% 6.25% 32.2% 6.25%);
-  background-image: linear-gradient(115deg,
-    transparent 18%, rgba(255,90,170,0.6) 32%, rgba(90,235,210,0.6) 45%,
-    rgba(130,150,255,0.55) 55%, rgba(255,225,110,0.5) 68%, transparent 82%);
-  background-size: 260% 260%;
-  mix-blend-mode: color-dodge;
-  opacity: 0.75;
-  animation: holoDrift 4.4s ease-in-out infinite alternate;
-}
-
-/* EPIC — galaxy foil across the whole card */
-.holo-galaxy {
-  background-image:
-    repeating-radial-gradient(circle at 30% 25%,
-      rgba(176,106,232,0.45) 0 2px, rgba(110,200,235,0.38) 2px 4px, transparent 4px 8px),
-    linear-gradient(120deg,
-      rgba(255,90,170,0.36), rgba(90,190,255,0.36) 40%, rgba(255,225,110,0.3) 75%, rgba(255,90,170,0.36));
-  background-size: 14px 14px, 280% 280%;
-  mix-blend-mode: color-dodge;
-  opacity: 0.58;
-  animation: holoDrift 4s ease-in-out infinite alternate;
-}
-
-/* LEGENDARY — full-card rainbow foil */
-.holo-full {
-  background-image:
-    linear-gradient(110deg,
-      rgba(255,80,80,0.5) 0%, rgba(255,185,60,0.5) 18%, rgba(255,245,110,0.45) 33%,
-      rgba(100,255,170,0.45) 48%, rgba(80,200,255,0.5) 64%, rgba(180,110,255,0.5) 82%,
-      rgba(255,80,80,0.5) 100%),
-    radial-gradient(circle at var(--hx, 50%) var(--hy, 35%), rgba(255,252,240,0.5), transparent 55%);
-  background-size: 300% 300%, 100% 100%;
-  mix-blend-mode: color-dodge;
-  opacity: 0.65;
-  animation: holoDrift 3.4s ease-in-out infinite alternate;
-}
-@keyframes holoDrift {
-  from { background-position: 15% 20%; }
-  to { background-position: 85% 80%; }
-}
-
-/* sweeping light beam (legendary) */
-.beam {
-  background-image: linear-gradient(120deg,
-    transparent 38%, rgba(255,250,235,0.5) 49%, rgba(255,250,235,0.16) 53%, transparent 64%);
-  background-size: 320% 320%;
-  mix-blend-mode: screen;
-  animation: beamSweep 3s ease-in-out infinite;
-}
-@keyframes beamSweep {
-  0% { background-position: 120% 0; }
-  55%, 100% { background-position: -140% 0; }
-}
-
-/* glitter flecks */
-.sparkles {
-  background-image:
-    radial-gradient(1px 1px at 18% 22%, #fff, transparent),
-    radial-gradient(1px 1px at 72% 14%, #fff, transparent),
-    radial-gradient(2px 2px at 86% 38%, #fff, transparent),
-    radial-gradient(1px 1px at 34% 48%, #fff, transparent),
-    radial-gradient(1px 1px at 58% 66%, #fff, transparent),
-    radial-gradient(2px 2px at 12% 76%, #fff, transparent),
-    radial-gradient(1px 1px at 80% 84%, #fff, transparent),
-    radial-gradient(1px 1px at 46% 90%, #fff, transparent);
-  mix-blend-mode: screen;
-  animation: sparkleTwinkle 1.7s steps(2) infinite;
-}
-@keyframes sparkleTwinkle {
-  0%, 100% { opacity: 0.85; transform: translate(0, 0); }
-  50% { opacity: 0.22; transform: translate(1px, 1px); }
 }
 
 /* rarity glows — soft, not neon */
@@ -601,8 +533,11 @@ body.screenshake #app, body.screenshake .overlay { animation: screenShake 0.38s 
   position: absolute; inset: 0;
   backface-visibility: hidden;
   transform: translateZ(3px);
-  background: radial-gradient(circle at 50% 36%, #fffdf6, #f6e9c8 55%, #e3c171 100%);
+  background: #fffdf6;
   box-shadow:
+    inset 0 0 0 4px #f6e9c8,
+    inset 0 0 0 8px #ecd9a4,
+    inset 0 0 0 12px #e3c171,
     0 0 30px rgba(255,250,235,0.95),
     0 0 80px rgba(232,181,77,0.7),
     0 0 160px rgba(232,181,77,0.35);
