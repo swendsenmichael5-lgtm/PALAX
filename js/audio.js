@@ -73,10 +73,42 @@ const AudioEngine = (() => {
 
   /* ---------- sound effects ---------- */
   const sfx = {
-    // progressive tearing — pitch rises as the rip travels
+    // granular tearing — several crackly grains per movement, pitch
+    // climbing as the rip travels, like fibres giving way one by one
     rip(progress) {
       resume();
-      noise({ dur: 0.07, vol: 0.32, freq: 900 + progress * 2600, q: 2.5, slide: 600 });
+      const base = 800 + progress * 2400;
+      for (let i = 0; i < 3; i++) {
+        noise({
+          time: i * 0.018 + Math.random() * 0.01,
+          dur: 0.035 + Math.random() * 0.03,
+          vol: 0.18 + Math.random() * 0.14,
+          freq: base + (Math.random() - 0.5) * 700,
+          q: 2.5 + Math.random() * 2,
+          slide: 300 + Math.random() * 500,
+        });
+      }
+      if (Math.random() < 0.3)   // occasional deeper fibre snap
+        noise({ dur: 0.05, vol: 0.16, freq: 350 + progress * 300, q: 1.2 });
+    },
+    // half-torn flap springs back when you let go
+    snapBack() {
+      resume();
+      tone({ type: 'sawtooth', freq: 150, dur: 0.16, vol: 0.18, slide: 110 });
+      noise({ dur: 0.06, vol: 0.12, freq: 1200, q: 1.5 });
+    },
+    // card sliding out of the wrapper — a long card-stock rasp
+    cardDraw() {
+      resume();
+      noise({ dur: 0.45, vol: 0.2, freq: 2200, q: 1.1, slide: 2400 });
+      tone({ type: 'triangle', freq: 380, dur: 0.4, vol: 0.07, slide: 320 });
+    },
+    // the empty wrapper tumbling to the floor
+    bodyDrop() {
+      resume();
+      noise({ dur: 0.3, vol: 0.2, freq: 420, q: 0.9, slide: -200 });
+      tone({ type: 'sine', freq: 115, time: 0.16, dur: 0.22, vol: 0.26, slide: -55 });
+      noise({ time: 0.2, dur: 0.1, vol: 0.1, freq: 900, q: 1.4 });
     },
     // the flap blows off — noise blast + sub boom + sparkle tail
     burst() {
