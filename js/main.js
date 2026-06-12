@@ -376,7 +376,9 @@ function spinReveal(card) {
   el.style.transition = 'none';   // JS drives the spin, not the flip transition
   const cover = document.createElement('div');
   cover.className = 'mystery-cover';
-  el.appendChild(cover);
+  const coverBack = document.createElement('div');
+  coverBack.className = 'mystery-cover back';
+  el.append(cover, coverBack);
   wrap.appendChild(el);
   row.appendChild(wrap);
 
@@ -416,6 +418,7 @@ function spinReveal(card) {
 
   function reveal() {
     cover.classList.add('off');
+    coverBack.classList.add('off');
     el.classList.add('flipped');             // triggers the rarity jolt animation
     fx.flash();
     fx.shake();
