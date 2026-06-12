@@ -6,7 +6,7 @@
 const PACKS = {
   palax: {
     id: 'palax', name: 'PALAX PACK', cost: 0, cards: 1,
-    colors: ['#9ff0f2', '#2de2e6', '#15929e', '#0a3b4a'],
+    colors: ['#f6e3b0', '#e8b54d', '#a87b24', '#4a3812'],
     odds: { common: 44, uncommon: 28, rare: 17, epic: 8, legendary: 3 },
   },
 };

@@ -126,37 +126,44 @@ function drawCardFace(canvas, card) {
   drawText(ctx, n1, Math.floor((CARD_W - textW(n1)) / 2), 4, '#eef2ff');
   drawText(ctx, n2 || '', Math.floor((CARD_W - textW(n2 || '')) / 2), 10, pal[0]);
 
-  // ---- art window: synthwave scene ----
-  const HZ = ART.y + 21;   // horizon line
-  for (let y = ART.y; y < ART.y + ART.h; y++) {
-    ctx.fillStyle = y < ART.y + 6 ? '#07050f' : (y < ART.y + 13 ? '#0d0a1f' : (y < HZ ? pal[3] : '#0a0714'));
+  // ---- art window: moonlit night scene ----
+  const BASE = ART.y + ART.h;            // bottom of window
+  for (let y = ART.y; y < BASE; y++) {   // night-sky gradient, tinted by rarity
+    const t = (y - ART.y) / ART.h;
+    ctx.fillStyle = t < 0.25 ? '#0a0d14' : (t < 0.55 ? '#11161f' : pal[3]);
     ctx.fillRect(ART.x, y, ART.w, 1);
   }
   for (let i = 0; i < 14; i++) {  // stars
-    ctx.fillStyle = rnd() < 0.6 ? '#ffffff' : pal[0];
-    ctx.fillRect(ART.x + Math.floor(rnd() * ART.w), ART.y + Math.floor(rnd() * 16), 1, 1);
+    ctx.fillStyle = rnd() < 0.7 ? '#f1e9d6' : pal[0];
+    ctx.fillRect(ART.x + Math.floor(rnd() * ART.w), ART.y + Math.floor(rnd() * 20), 1, 1);
   }
-  // striped sun
-  const scx = ART.x + ART.w / 2, sr = 9;
-  for (let dy = -sr; dy <= 0; dy++) {
-    if (dy > -4 && dy % 2 === 0) continue;
-    const half = Math.floor(Math.sqrt(sr * sr - dy * dy));
-    ctx.fillStyle = dy < -5 ? pal[0] : pal[1];
-    ctx.fillRect(scx - half, HZ + dy, half * 2, 1);
+  // crescent moon, upper right
+  const mx = ART.x + ART.w - 11, my = ART.y + 9, mr = 5;
+  for (let dy = -mr; dy <= mr; dy++) {
+    const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
+    ctx.fillStyle = '#f6e9c8';
+    ctx.fillRect(mx - half, my + dy, half * 2 || 1, 1);
   }
-  ctx.fillStyle = pal[0];
-  ctx.fillRect(ART.x, HZ, ART.w, 1);
-  // grid floor
-  ctx.fillStyle = pal[2];
-  [HZ + 3, HZ + 7, HZ + 12, HZ + 18].forEach(y => {
-    if (y < ART.y + ART.h) ctx.fillRect(ART.x, y, ART.w, 1);
-  });
-  for (let i = -2; i <= 2; i++) {
-    for (let y = HZ + 1; y < ART.y + ART.h; y++) {
-      const x = scx + i * (y - HZ);
-      if (x >= ART.x && x < ART.x + ART.w) ctx.fillRect(x, y, 1, 1);
+  for (let dy = -mr; dy <= mr; dy++) {   // carve the shadow side
+    const half = Math.floor(Math.sqrt(mr * mr - dy * dy));
+    ctx.fillStyle = '#11161f';
+    ctx.fillRect(mx + 2 - half, my + dy, half * 2 || 1, 1);
+  }
+  // mountain silhouettes along the base
+  const p1 = ART.x + Math.floor(ART.w * 0.28), p2 = ART.x + Math.floor(ART.w * 0.74);
+  for (let x = ART.x; x < ART.x + ART.w; x++) {
+    const h = Math.max(0, 13 - Math.abs(x - p1), 17 - Math.floor(Math.abs(x - p2) * 0.8));
+    if (h > 0) {
+      ctx.fillStyle = '#0a0d12';
+      ctx.fillRect(x, BASE - h, 1, h);
+      ctx.fillStyle = pal[2];               // rarity-tinted ridge light
+      ctx.fillRect(x, BASE - h, 1, 1);
     }
   }
+  // low mist bands
+  ctx.fillStyle = 'rgba(241,233,214,0.14)';
+  ctx.fillRect(ART.x + 3, BASE - 5, ART.w - 9, 1);
+  ctx.fillRect(ART.x + 9, BASE - 3, ART.w - 15, 1);
 
   // creature sprite, 14x14 mirrored at 3x — big and chunky
   const G = 14, sc = 3;
@@ -261,96 +268,96 @@ function makeTearLine(seedRnd) {
 }
 
 /* Full wrapper art on an offscreen canvas.
-   New design: matte-black cyber foil with a neon frame, a glowing
-   emblem window, circuit traces, chevrons and a glyph label strip. */
+   Premium pouch: deep navy foil, gold pinstripe trim, crest
+   medallion with a crescent moon, ivory label plate. */
 function drawPackArt(pack) {
   const c = document.createElement('canvas');
   c.width = PACK_W; c.height = PACK_H;
   const ctx = c.getContext('2d');
-  const [c0, c1, c2, c3] = pack.colors;
+  const [c0, c1, c2, c3] = pack.colors;   // gold ramp: light → dark
 
-  // matte dark body
-  ctx.fillStyle = '#15101f';
-  ctx.fillRect(0, 0, PACK_W, PACK_H);
-  // subtle vertical shading
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.fillRect(3, 0, 8, PACK_H);
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fillRect(PACK_W - 10, 0, 10, PACK_H);
+  // navy foil body with soft vertical shading
+  for (let x = 0; x < PACK_W; x++) {
+    ctx.fillStyle = x < 8 ? '#27303f' : (x < 34 ? '#1f2734' : '#181f2a');
+    ctx.fillRect(x, 0, 1, PACK_H);
+  }
+  // faint diagonal weave
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  for (let y = 0; y < PACK_H; y++)
+    for (let x = (y % 4); x < PACK_W; x += 4) ctx.fillRect(x, y, 1, 1);
 
   // crimp zigzag top + bottom
   for (let x = 0; x < PACK_W; x += 2) {
-    ctx.fillStyle = c3; ctx.fillRect(x, 0, 1, 4);
-    ctx.fillStyle = '#0a0714'; ctx.fillRect(x + 1, 0, 1, 4);
-    ctx.fillStyle = c3; ctx.fillRect(x + 1, PACK_H - 4, 1, 4);
-    ctx.fillStyle = '#0a0714'; ctx.fillRect(x, PACK_H - 4, 1, 4);
+    ctx.fillStyle = '#101620'; ctx.fillRect(x, 0, 1, 4);
+    ctx.fillStyle = '#2c3644'; ctx.fillRect(x + 1, 0, 1, 4);
+    ctx.fillStyle = '#2c3644'; ctx.fillRect(x, PACK_H - 4, 1, 4);
+    ctx.fillStyle = '#101620'; ctx.fillRect(x + 1, PACK_H - 4, 1, 4);
   }
   ctx.fillStyle = c1;
   ctx.fillRect(0, 4, PACK_W, 1);
   ctx.fillRect(0, PACK_H - 5, PACK_W, 1);
 
-  // neon frame inset
+  // double gold pinstripe frame
   ctx.fillStyle = c1;
   ctx.fillRect(2, 7, PACK_W - 4, 1);
   ctx.fillRect(2, PACK_H - 8, PACK_W - 4, 1);
   ctx.fillRect(2, 7, 1, PACK_H - 15);
   ctx.fillRect(PACK_W - 3, 7, 1, PACK_H - 15);
-  // bright frame corners
-  ctx.fillStyle = c0;
-  [[2, 7], [PACK_W - 4, 7], [2, PACK_H - 9], [PACK_W - 4, PACK_H - 9]].forEach(([x, y]) =>
-    ctx.fillRect(x, y, 2, 2));
-
-  // emblem window — glowing diamond core
-  ctx.fillStyle = '#0a0714';
-  ctx.fillRect(14, 12, 20, 20);
   ctx.fillStyle = c2;
-  ctx.fillRect(14, 12, 20, 1); ctx.fillRect(14, 31, 20, 1);
-  ctx.fillRect(14, 12, 1, 20); ctx.fillRect(33, 12, 1, 20);
-  // diamond
-  for (let dy = -6; dy <= 6; dy++) {
-    const half = 6 - Math.abs(dy);
+  ctx.fillRect(4, 9, PACK_W - 8, 1);
+  ctx.fillRect(4, PACK_H - 10, PACK_W - 8, 1);
+  ctx.fillRect(4, 9, 1, PACK_H - 19);
+  ctx.fillRect(PACK_W - 5, 9, 1, PACK_H - 19);
+
+  // crest medallion: gold ring with crescent moon
+  const cx = 24, cy = 25, R = 11;
+  for (let dy = -R; dy <= R; dy++) {
+    const half = Math.floor(Math.sqrt(R * R - dy * dy));
+    ctx.fillStyle = c2;
+    ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -(R - 2); dy <= R - 2; dy++) {
+    const half = Math.floor(Math.sqrt((R - 2) * (R - 2) - dy * dy));
+    ctx.fillStyle = '#141a24';
+    ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
+  }
+  ctx.fillStyle = c0;   // ring highlight
+  ctx.fillRect(cx - 4, cy - R, 8, 1);
+  // crescent inside
+  for (let dy = -5; dy <= 5; dy++) {
+    const half = Math.floor(Math.sqrt(25 - dy * dy));
     ctx.fillStyle = c1;
-    ctx.fillRect(24 - half, 22 + dy, half * 2 || 1, 1);
+    ctx.fillRect(cx - half, cy + dy, half * 2 || 1, 1);
   }
-  for (let dy = -3; dy <= 3; dy++) {
-    const half = 3 - Math.abs(dy);
-    ctx.fillStyle = c0;
-    ctx.fillRect(24 - half, 22 + dy, half * 2 || 1, 1);
+  for (let dy = -5; dy <= 5; dy++) {
+    const half = Math.floor(Math.sqrt(25 - dy * dy));
+    ctx.fillStyle = '#141a24';
+    ctx.fillRect(cx + 2 - half, cy + dy, half * 2 || 1, 1);
   }
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(23, 21, 2, 2);
-
-  // circuit traces from the window to the frame
-  ctx.fillStyle = c2;
-  ctx.fillRect(4, 21, 10, 1); ctx.fillRect(34, 21, 10, 1);
-  ctx.fillRect(4, 25, 6, 1);  ctx.fillRect(38, 25, 6, 1);
+  // tiny star by the moon
   ctx.fillStyle = c0;
-  [[4, 21], [43, 21], [4, 25], [43, 25]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+  ctx.fillRect(cx + 3, cy - 2, 1, 3);
+  ctx.fillRect(cx + 2, cy - 1, 3, 1);
 
-  // chevron band
-  for (let x = 4; x < PACK_W - 4; x++) {
-    const y = 40 + Math.floor(3 * Math.abs(((x - 4) / 5) % 2 - 1));
-    ctx.fillStyle = c1; ctx.fillRect(x, y, 1, 2);
-    ctx.fillStyle = c3; ctx.fillRect(x, y + 2, 1, 1);
+  // gold chevron divider
+  for (let x = 6; x < PACK_W - 6; x++) {
+    const y = 42 + Math.floor(2 * Math.abs(((x - 6) / 6) % 2 - 1));
+    ctx.fillStyle = c1; ctx.fillRect(x, y, 1, 1);
   }
 
-  // glyph label strip
-  ctx.fillStyle = '#0a0714';
-  ctx.fillRect(7, 49, PACK_W - 14, 9);
-  ctx.fillStyle = c2;
-  ctx.fillRect(7, 49, PACK_W - 14, 1);
-  ctx.fillStyle = '#eef2ff';
-  for (let i = 0; i < 5; i++) ctx.fillRect(11 + i * 6, 51, 4, 5);
-  ctx.fillStyle = c1;
-  for (let i = 0; i < 5; i++) ctx.fillRect(12 + i * 6, 53, 2, 2);
+  // ivory label plate with glyph marks
+  ctx.fillStyle = '#e9dfc8';
+  ctx.fillRect(8, 48, PACK_W - 16, 11);
+  ctx.fillStyle = '#b3a786';
+  ctx.fillRect(8, 58, PACK_W - 16, 1);
+  ctx.fillStyle = '#2a2415';
+  for (let i = 0; i < 5; i++) ctx.fillRect(12 + i * 5, 51, 3, 5);
+  ctx.fillStyle = '#e9dfc8';
+  for (let i = 0; i < 5; i++) ctx.fillRect(13 + i * 5, 53, 1, 1);
 
-  // scanline texture over everything
-  ctx.fillStyle = 'rgba(0,0,0,0.16)';
-  for (let y = 0; y < PACK_H; y += 3) ctx.fillRect(0, y, PACK_W, 1);
-
-  // glints
-  ctx.fillStyle = '#ffffff';
-  [[8, 10], [40, 15], [11, 44], [37, 57]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+  // sparkle glints
+  ctx.fillStyle = '#fffaf0';
+  [[9, 13], [38, 18], [13, 38], [40, 62]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
 
   return c;
 }

@@ -6,7 +6,7 @@
 <title>PALAX — Pixel Pack Ripper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=8">
+<link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
 
@@ -31,15 +31,15 @@ window.onerror = function (msg, src, line) {
 };
 </script>
 
-<!-- synthwave backdrop layers -->
-<div id="bgStars"></div>
-<div id="gridFloor"></div>
+<!-- backdrop: soft top light + drifting dust motes -->
+<div id="bgGlow"></div>
+<div id="motes"></div>
 
 <!-- particle / FX layer -->
 <canvas id="fxCanvas"></canvas>
 
-<!-- CRT scanlines on top of everything -->
-<div id="scanlines"></div>
+<!-- white flash on big moments -->
+<div id="flash"></div>
 
 <div id="app">
 
@@ -138,8 +138,8 @@ window.onerror = function (msg, src, line) {
   </div>
 </div>
 
-<script src="js/audio.js?v=8"></script>
-<script src="js/cards.js?v=8"></script>
-<script src="js/main.js?v=8"></script>
+<script src="js/audio.js?v=9"></script>
+<script src="js/cards.js?v=9"></script>
+<script src="js/main.js?v=9"></script>
 </body>
 </html>

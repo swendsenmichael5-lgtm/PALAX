@@ -160,49 +160,51 @@ const AudioEngine = (() => {
   };
 
   /* ---------- theme song ----------
-     A looping synthwave cruise in A minor — four-on-the-floor kick,
-     driving octave sawtooth bass, sustained neon pads and a sparse
-     dreamy lead. 16 steps per bar over Am / F / C / G.          */
-  const BPM = 100;
+     A mellow, swung lounge loop — soft kick, brushed hats, walking
+     bass and a lazy sine lead over Am7 / Dm7 / G7 / Cmaj7.       */
+  const BPM = 84;
   const STEP = 60 / BPM / 4;          // 16th note
   const BARS = 4;
   const N = BARS * 16;
 
-  // sparse, floaty lead (midi or 0 = rest)
+  // lazy lead (midi or 0 = rest)
   const lead = [
-    81,0,0,0, 76,0,0,0, 79,0,0,76, 0,0,74,0,
-    77,0,0,0, 72,0,0,0, 76,0,0,72, 0,0,69,0,
-    72,0,0,0, 76,0,0,0, 79,0,0,81, 0,0,84,0,
-    79,0,0,0, 74,0,0,0, 71,0,0,74, 0,0,76,0,
+    76,0,0,0, 0,0,74,0, 72,0,0,0, 0,0,69,0,
+    74,0,0,0, 0,0,72,0, 69,0,0,0, 0,0,65,0,
+    71,0,0,0, 0,0,69,0, 67,0,0,0, 62,0,64,0,
+    72,0,0,0, 0,0,76,0, 79,0,0,0, 0,0,74,0,
   ];
-  const bassRoots = [45, 41, 36, 43];                  // A2 F2 C2 G2 per bar
-  const padChords = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]];
+  const bassWalk = [
+    [45, 52, 57, 52],   // Am7:  A  E  a  E
+    [38, 45, 50, 48],   // Dm7:  D  A  d  C
+    [43, 50, 53, 47],   // G7:   G  D  F  B
+    [36, 43, 48, 43],   // Cmaj7:C  G  c  G
+  ];
+  const padChords = [[57, 60, 64, 67], [53, 57, 62, 65], [55, 59, 62, 65], [48, 52, 55, 59]];
 
   let step = 0, nextTime = 0;
 
   function scheduleStep(s, t) {
     const when = t - ctx.currentTime;
     const bar = Math.floor(s / 16);
-    // driving octave bass on every 8th note
-    if (s % 2 === 0) {
-      const oct = (s % 4 === 2) ? 12 : 0;
-      tone({ type: 'sawtooth', freq: midi(bassRoots[bar] + oct), time: when, dur: STEP * 1.7, vol: 0.22, dest: musicGain });
+    const swing = (s % 4 === 2) ? STEP * 0.45 : 0;   // lazy swung off-beats
+    // walking bass on the quarter notes
+    if (s % 4 === 0) {
+      tone({ type: 'triangle', freq: midi(bassWalk[bar][(s % 16) / 4]), time: when, dur: STEP * 3.6, vol: 0.3, attack: 0.02, dest: musicGain });
     }
-    // sustained pad at the top of each bar (slightly detuned pair)
+    // warm pad once a bar
     if (s % 16 === 0) {
-      padChords[bar].forEach(n => {
-        tone({ type: 'sawtooth', freq: midi(n), time: when, dur: STEP * 15, vol: 0.03, attack: 0.4, dest: musicGain });
-        tone({ type: 'triangle', freq: midi(n) * 1.004, time: when, dur: STEP * 15, vol: 0.035, attack: 0.4, dest: musicGain });
-      });
+      padChords[bar].forEach(n =>
+        tone({ type: 'triangle', freq: midi(n), time: when, dur: STEP * 15, vol: 0.028, attack: 0.5, dest: musicGain }));
     }
-    // dreamy lead with a soft echo
+    // lazy sine lead with a quiet echo
     if (lead[s]) {
-      tone({ type: 'square', freq: midi(lead[s]), time: when, dur: STEP * 3.2, vol: 0.12, attack: 0.02, dest: musicGain });
-      tone({ type: 'square', freq: midi(lead[s]), time: when + STEP * 3, dur: STEP * 2.2, vol: 0.045, attack: 0.02, dest: musicGain });
+      tone({ type: 'sine', freq: midi(lead[s]), time: when + swing, dur: STEP * 4.5, vol: 0.15, attack: 0.03, dest: musicGain });
+      tone({ type: 'sine', freq: midi(lead[s]), time: when + swing + STEP * 4, dur: STEP * 3, vol: 0.05, attack: 0.03, dest: musicGain });
     }
-    if (s % 4 === 0) tone({ type: 'sine', freq: 100, time: when, dur: 0.13, vol: 0.42, slide: -60, dest: musicGain }); // 4-on-floor kick
-    if (s % 8 === 4) noise({ time: when, dur: 0.16, vol: 0.16, freq: 1700, q: 0.7, dest: musicGain });                 // snare 2 & 4
-    if (s % 4 === 2) noise({ time: when, dur: 0.04, vol: 0.08, freq: 8000, dest: musicGain });                          // offbeat hat
+    if (s % 16 === 0) tone({ type: 'sine', freq: 85, time: when, dur: 0.12, vol: 0.3, slide: -45, dest: musicGain });  // soft kick
+    if (s % 16 === 8) noise({ time: when, dur: 0.2, vol: 0.06, freq: 2600, q: 0.6, dest: musicGain });                 // brushed snare
+    if (s % 4 === 2) noise({ time: when + swing, dur: 0.05, vol: 0.035, freq: 9000, dest: musicGain });                // swung hat
   }
 
   function startTheme() {
