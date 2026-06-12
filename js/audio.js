@@ -78,12 +78,15 @@ const AudioEngine = (() => {
       resume();
       noise({ dur: 0.07, vol: 0.32, freq: 900 + progress * 2600, q: 2.5, slide: 600 });
     },
-    // the flap blows off
+    // the flap blows off — noise blast + sub boom + sparkle tail
     burst() {
       resume();
-      noise({ dur: 0.45, vol: 0.5, freq: 3500, q: 0.7, slide: -3000 });
+      noise({ dur: 0.5, vol: 0.55, freq: 3800, q: 0.7, slide: -3400 });
       tone({ type: 'square', freq: 180, dur: 0.3, vol: 0.25, slide: -120 });
-      tone({ type: 'sawtooth', freq: 90, dur: 0.4, vol: 0.3, slide: -60 });
+      tone({ type: 'sawtooth', freq: 90, dur: 0.45, vol: 0.32, slide: -60 });
+      tone({ type: 'sine', freq: 55, dur: 0.55, vol: 0.55, slide: -25 });
+      for (let i = 0; i < 5; i++)
+        tone({ type: 'sine', freq: midi(96 + (i * 5) % 12), time: 0.12 + i * 0.05, dur: 0.18, vol: 0.07 });
     },
     cardSlide(i) {
       resume();

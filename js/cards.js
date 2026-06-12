@@ -106,6 +106,11 @@ function buildCardEl(card, { faceUp = false } = {}) {
   rar.className = 'card-rarity';
   rar.textContent = RARITIES[card.rarity].label;
   front.append(art, name, rar);
+  if (RARITY_ORDER.indexOf(card.rarity) >= 2) {
+    const holo = document.createElement('div');
+    holo.className = 'holo-overlay';
+    front.appendChild(holo);
+  }
   const back = document.createElement('div');
   back.className = 'card-face card-back-face';
   el.append(front, back);
@@ -134,18 +139,30 @@ function drawPackArt(pack) {
   const ctx = c.getContext('2d');
   const [c0, c1, c2, c3] = pack.colors;
 
-  // body
-  ctx.fillStyle = c1;
-  ctx.fillRect(0, 0, PACK_W, PACK_H);
-  // vertical sheen stripes
+  // body with vertical foil shading bands
   for (let x = 0; x < PACK_W; x++) {
-    if (x % 11 < 2) { ctx.fillStyle = c0; ctx.fillRect(x, 0, 1, PACK_H); }
+    const t = x / PACK_W;
+    ctx.fillStyle = t < 0.14 ? c0 : (t < 0.55 ? c1 : (t < 0.85 ? c2 : c3));
+    ctx.fillRect(x, 0, 1, PACK_H);
   }
-  // diagonal zigzag band
-  ctx.fillStyle = c2;
+  // bright sheen stripes
+  ctx.fillStyle = c0;
+  for (let x = 0; x < PACK_W; x++) {
+    if (x % 13 < 2) ctx.fillRect(x, 0, 1, PACK_H);
+  }
+  // diamond foil texture
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = c0;
+  for (let y = 0; y < PACK_H; y += 4) {
+    for (let x = (y % 8 === 0 ? 0 : 2); x < PACK_W; x += 4) ctx.fillRect(x, y, 1, 1);
+  }
+  ctx.globalAlpha = 1;
+  // diagonal zigzag band with shadow
   for (let x = 0; x < PACK_W; x++) {
     const y = 34 + Math.floor(5 * Math.abs(((x / 6) % 2) - 1));
-    ctx.fillRect(x, y, 1, 7);
+    ctx.fillStyle = c3; ctx.fillRect(x, y + 7, 1, 2);
+    ctx.fillStyle = c2; ctx.fillRect(x, y, 1, 7);
+    ctx.fillStyle = c0; ctx.fillRect(x, y, 1, 1);
   }
   // crimp tops and bottoms
   ctx.fillStyle = c3;
@@ -155,29 +172,49 @@ function drawPackArt(pack) {
   }
   ctx.fillRect(0, 4, PACK_W, 1);
   ctx.fillRect(0, PACK_H - 5, PACK_W, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(0, 5, PACK_W, 1);
 
-  // label plate
+  // label plate with bevel
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(5, 17, PACK_W - 10, 15);
   ctx.fillStyle = '#14181f';
   ctx.fillRect(6, 18, PACK_W - 12, 12);
   ctx.fillStyle = c0;
-  ctx.fillRect(7, 19, PACK_W - 14, 1);
-  // tiny pixel "PALAX" mark (abstract 3px glyph row)
+  ctx.fillRect(6, 18, PACK_W - 12, 1);
+  ctx.fillStyle = c3;
+  ctx.fillRect(6, 29, PACK_W - 12, 1);
+  // tiny pixel "PALAX" mark (abstract glyph row)
   ctx.fillStyle = '#f4f1e8';
-  for (let i = 0; i < 5; i++) ctx.fillRect(10 + i * 6, 22, 4, 5);
+  for (let i = 0; i < 5; i++) ctx.fillRect(10 + i * 6, 21, 4, 6);
   ctx.fillStyle = c2;
-  for (let i = 0; i < 5; i++) ctx.fillRect(11 + i * 6, 24, 2, 2);
+  for (let i = 0; i < 5; i++) ctx.fillRect(11 + i * 6, 23, 2, 2);
 
-  // star burst under label
+  // glowing star burst under label
+  ctx.fillStyle = c3;
+  ctx.fillRect(21, 47, 6, 6);
   ctx.fillStyle = c0;
   ctx.fillRect(22, 48, 4, 4);
-  ctx.fillRect(23, 46, 2, 8);
-  ctx.fillRect(20, 49, 8, 2);
+  ctx.fillRect(23, 45, 2, 10);
+  ctx.fillRect(19, 49, 10, 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(23, 48, 2, 2);
 
-  // edge shading
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  // sparkle glints
+  ctx.fillStyle = '#ffffff';
+  [[9, 10], [39, 14], [14, 56], [36, 52], [42, 38]].forEach(([x, y]) => {
+    ctx.fillRect(x, y, 1, 1);
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1);
+    ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1);
+    ctx.globalAlpha = 1;
+  });
+
+  // edge shading + rim light
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fillRect(0, 0, 2, PACK_H);
   ctx.fillRect(PACK_W - 2, 0, 2, PACK_H);
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
   ctx.fillRect(2, 0, 1, PACK_H);
   return c;
 }

@@ -48,10 +48,19 @@ function load() {
 
 const $ = id => document.getElementById(id);
 
-/* ---------------- coins ---------------- */
+/* ---------------- coins (rolling counter) ---------------- */
+let coinAnimFrom = 0, coinAnimStart = 0;
 function setCoins(n) {
+  coinAnimFrom = parseInt($('coinCount').textContent, 10) || 0;
   state.coins = Math.max(0, n);
-  $('coinCount').textContent = state.coins;
+  coinAnimStart = performance.now();
+  const roll = now => {
+    const t = Math.min(1, (now - coinAnimStart) / 450);
+    const eased = 1 - Math.pow(1 - t, 3);
+    $('coinCount').textContent = Math.round(coinAnimFrom + (state.coins - coinAnimFrom) * eased);
+    if (t < 1) requestAnimationFrame(roll);
+  };
+  requestAnimationFrame(roll);
   const pill = $('coinsPill');
   pill.classList.remove('bump');
   void pill.offsetWidth;
@@ -134,7 +143,7 @@ const fx = (() => {
   }
 
   function confetti() {
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 110; i++) {
       parts.push({
         x: Math.random() * canvas.width, y: -10 - Math.random() * 150,
         vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3,
@@ -146,14 +155,32 @@ const fx = (() => {
     }
   }
 
+  // gentle rising sparkles while a scene is "live" (e.g. pack opening)
+  let ambient = null;   // {rectFn, colors}
+  function setAmbient(a) { ambient = a; }
+
   function tick() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (ambient && Math.random() < 0.22) {
+      const r = ambient.rectFn();
+      parts.push({
+        x: r.left + Math.random() * r.width,
+        y: r.top + r.height * (0.3 + Math.random() * 0.7),
+        vx: (Math.random() - 0.5) * 0.4, vy: -(0.4 + Math.random() * 0.8),
+        life: 1, decay: 0.007 + Math.random() * 0.008,
+        size: 2 + Math.random() * 3,
+        color: ambient.colors[Math.floor(Math.random() * ambient.colors.length)],
+        spin: 0, rot: Math.PI / 4, float: true, twinkle: true,
+      });
+    }
     parts = parts.filter(p => p.life > 0);
     for (const p of parts) {
       p.x += p.vx; p.y += p.vy;
-      p.vy += 0.18; p.life -= p.decay; p.rot += p.spin;
+      if (!p.float) p.vy += 0.18;
+      p.life -= p.decay; p.rot += p.spin;
       ctx.save();
-      ctx.globalAlpha = Math.max(0, p.life);
+      const a = p.twinkle ? p.life * (0.55 + 0.45 * Math.sin(p.life * 40)) : p.life;
+      ctx.globalAlpha = Math.max(0, Math.min(1, a));
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.fillStyle = p.color;
@@ -174,20 +201,41 @@ const fx = (() => {
     setTimeout(() => document.body.classList.remove('flashwhite'), 180);
   }
 
-  return { burst, confetti, shake, flash };
+  return { burst, confetti, shake, flash, setAmbient };
 })();
 
 /* ============================================================
    Shop
    ============================================================ */
+
+/* 3D tilt that follows the pointer */
+function addTilt(el, max = 14) {
+  el.addEventListener('pointermove', e => {
+    const r = el.getBoundingClientRect();
+    const dx = (e.clientX - r.left) / r.width - 0.5;
+    const dy = (e.clientY - r.top) / r.height - 0.5;
+    el.style.animation = 'none';
+    el.style.transform =
+      `perspective(600px) rotateY(${dx * max * 2}deg) rotateX(${-dy * max * 2}deg) scale(1.1)`;
+  });
+  el.addEventListener('pointerleave', () => {
+    el.style.transform = '';
+    el.style.animation = '';
+  });
+}
+
 function buildShop() {
   const shelf = $('packShelf');
   shelf.innerHTML = '';
   for (const pack of Object.values(PACKS)) {
     const item = document.createElement('div');
     item.className = 'shelf-item';
+    const holo = document.createElement('div');
+    holo.className = 'pack-holo';
+    holo.style.setProperty('--packglow', pack.colors[1] + '88');
     const art = drawPackArt(pack);
-    art.className = 'shelf-pack';
+    holo.appendChild(art);
+    addTilt(holo);
     const name = document.createElement('div');
     name.className = 'shelf-name';
     name.textContent = `${pack.name} · ${pack.cards} CARDS`;
@@ -207,8 +255,8 @@ function buildShop() {
       startOpening(pack);
     };
     buy.addEventListener('click', tryBuy);
-    art.addEventListener('click', tryBuy);
-    item.append(art, name, buy);
+    holo.addEventListener('click', tryBuy);
+    item.append(holo, name, buy);
     shelf.appendChild(item);
   }
   $('pityHint').innerHTML =
@@ -254,12 +302,20 @@ function startOpening(pack) {
   renderPackCanvases(pack, $('packFlap'), $('packBody'), tearLine);
   $('packFlap').classList.remove('flying');
   $('packFlap').style.transform = '';
+  $('packBody').style.filter = `drop-shadow(0 0 10px ${pack.colors[1]}66)`;
   $('packWrap').classList.add('idle');
   $('packWrap').style.display = '';
   $('ripHint').style.display = '';
+  $('ripHint').innerHTML = '&#9756; SWIPE ACROSS THE TOP TO RIP &#9758;';
+  $('stageRays').classList.remove('on');
+  $('shockwave').classList.remove('boom');
   $('cardRow').innerHTML = '';
   $('doneBtn').classList.add('hidden');
   $('openOverlay').classList.remove('hidden');
+  fx.setAmbient({
+    rectFn: () => $('openStage').getBoundingClientRect(),
+    colors: [...pack.colors.slice(0, 2), '#ffffff'],
+  });
   buildShop(); // refresh pity counter text behind the overlay
 }
 
@@ -295,14 +351,20 @@ function startOpening(pack) {
     if (progress > opening.progress) {
       opening.progress = progress;
       drawTearProgress(opening.pack, $('packBody'), opening.tearLine, progress);
-      // flap peels as you rip
+      // flap peels as you rip, light leaks out of the widening tear
       $('packFlap').style.transform =
-        `translate(${-progress * 10}px, ${-progress * 14}px) rotate(${-progress * 8}deg)`;
+        `translate(${-progress * 12}px, ${-progress * 18}px) rotate(${-progress * 10}deg)`;
+      $('packBody').style.filter =
+        `drop-shadow(0 0 ${10 + progress * 30}px ${opening.pack.colors[1]}) brightness(${1 + progress * 0.25})`;
       const now = performance.now();
       if (now - opening.lastRipSfx > 55) {
         opening.lastRipSfx = now;
         AudioEngine.sfx.rip(progress);
         if (navigator.vibrate) navigator.vibrate(8);
+        // sparks fly from the tear tip
+        const r = wrap.getBoundingClientRect();
+        fx.burst(r.left + r.width * progress, r.top + r.height * 0.2,
+                 ['#ffffff', opening.pack.colors[0]], 4, 3);
       }
       if (progress >= 1) finishRip();
     }
@@ -327,14 +389,32 @@ function finishRip() {
 
   AudioEngine.sfx.burst();
   fx.shake();
+  fx.flash();
   if (navigator.vibrate) navigator.vibrate([30, 20, 60]);
 
   // foil flap flies off
   $('packFlap').classList.add('flying');
 
-  // particle burst from the tear
   const r = wrap.getBoundingClientRect();
-  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, o.pack.colors, 36, 8);
+  const stage = $('openStage').getBoundingClientRect();
+
+  // shockwave ring from the tear
+  const shock = $('shockwave');
+  shock.style.left = (r.left - stage.left + r.width / 2) + 'px';
+  shock.style.top = (r.top - stage.top + r.height * 0.2) + 'px';
+  shock.classList.remove('boom');
+  void shock.offsetWidth;
+  shock.classList.add('boom');
+
+  // god rays colored by the best card inside
+  const rank = c => RARITY_ORDER.indexOf(c.rarity);
+  const best = o.cards.reduce((a, b) => rank(a) >= rank(b) ? a : b);
+  $('stageRays').style.setProperty('--raycolor', RARITIES[best.rarity].color);
+  $('stageRays').classList.add('on');
+
+  // particle eruption from the tear
+  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, o.pack.colors, 50, 10);
+  fx.burst(r.left + r.width / 2, r.top + r.height * 0.2, ['#ffffff'], 16, 5);
 
   // pack body drops away, cards pour out
   setTimeout(() => {
@@ -353,6 +433,8 @@ function spawnCards(cards) {
       el.style.animationDelay = '0s';
       row.appendChild(el);
       AudioEngine.sfx.cardSlide(i);
+      const cr = el.getBoundingClientRect();
+      fx.burst(cr.left + cr.width / 2, cr.top + cr.height / 2, ['#ffffff', '#f5b83d'], 8, 3);
       el.addEventListener('click', () => revealCard(el, card), { once: true });
     }, i * 140);
   });
@@ -384,6 +466,8 @@ function revealCard(el, card) {
 
 $('doneBtn').addEventListener('click', () => {
   $('openOverlay').classList.add('hidden');
+  $('stageRays').classList.remove('on');
+  fx.setAmbient(null);
   opening = null;
   buildShop();
   renderCollection();
