@@ -149,43 +149,49 @@ const AudioEngine = (() => {
   };
 
   /* ---------- theme song ----------
-     A looping, swung chiptune groove in A minor — lead, bass,
-     chord stabs and percussion, sequenced 16 steps per bar over
-     a 4-bar progression (Am F C E).                       */
-  const BPM = 112;
+     A looping synthwave cruise in A minor — four-on-the-floor kick,
+     driving octave sawtooth bass, sustained neon pads and a sparse
+     dreamy lead. 16 steps per bar over Am / F / C / G.          */
+  const BPM = 100;
   const STEP = 60 / BPM / 4;          // 16th note
   const BARS = 4;
   const N = BARS * 16;
 
-  // lead melody (midi or 0 = rest)
+  // sparse, floaty lead (midi or 0 = rest)
   const lead = [
-    69,0,72,0, 76,0,72,0, 74,72,69,0, 64,0,67,0,
-    65,0,69,0, 72,0,69,0, 76,0,72,69, 65,0,64,0,
-    60,0,64,0, 67,0,72,0, 76,74,72,0, 67,0,64,0,
-    64,0,68,0, 71,0,68,0, 76,0,71,68, 64,62,59,0,
+    81,0,0,0, 76,0,0,0, 79,0,0,76, 0,0,74,0,
+    77,0,0,0, 72,0,0,0, 76,0,0,72, 0,0,69,0,
+    72,0,0,0, 76,0,0,0, 79,0,0,81, 0,0,84,0,
+    79,0,0,0, 74,0,0,0, 71,0,0,74, 0,0,76,0,
   ];
-  const bass = [
-    45,0,45,57, 45,0,45,0, 45,0,45,57, 43,0,45,0,
-    41,0,41,53, 41,0,41,0, 41,0,41,53, 40,0,41,0,
-    36,0,36,48, 36,0,36,0, 36,0,36,48, 38,0,40,0,
-    40,0,40,52, 40,0,40,0, 40,0,40,52, 40,43,45,47,
-  ];
-  // chord stabs on the off-beats (arrays of midi notes)
-  const chords = { 4: [69, 72, 76], 12: [69, 72, 76], 20: [65, 69, 72], 28: [65, 69, 72],
-                   36: [64, 67, 72], 44: [64, 67, 72], 52: [64, 68, 71], 60: [64, 68, 71] };
+  const bassRoots = [45, 41, 36, 43];                  // A2 F2 C2 G2 per bar
+  const padChords = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]];
 
   let step = 0, nextTime = 0;
 
   function scheduleStep(s, t) {
     const when = t - ctx.currentTime;
-    const swing = (s % 2 === 1) ? STEP * 0.16 : 0;
-    if (lead[s]) tone({ type: 'square', freq: midi(lead[s]), time: when + swing, dur: STEP * 1.6, vol: 0.16, dest: musicGain });
-    if (bass[s]) tone({ type: 'triangle', freq: midi(bass[s]), time: when, dur: STEP * 1.8, vol: 0.3, dest: musicGain });
-    if (chords[s]) chords[s].forEach(n =>
-      tone({ type: 'square', freq: midi(n - 12), time: when, dur: STEP * 1.1, vol: 0.05, dest: musicGain }));
-    if (s % 4 === 0) noise({ time: when, dur: 0.05, vol: 0.1, freq: 7000, dest: musicGain });           // hat
-    if (s % 8 === 4) noise({ time: when, dur: 0.12, vol: 0.18, freq: 1800, q: 0.8, dest: musicGain });  // snare
-    if (s % 16 === 0) tone({ type: 'sine', freq: 95, time: when, dur: 0.12, vol: 0.4, slide: -55, dest: musicGain }); // kick
+    const bar = Math.floor(s / 16);
+    // driving octave bass on every 8th note
+    if (s % 2 === 0) {
+      const oct = (s % 4 === 2) ? 12 : 0;
+      tone({ type: 'sawtooth', freq: midi(bassRoots[bar] + oct), time: when, dur: STEP * 1.7, vol: 0.22, dest: musicGain });
+    }
+    // sustained pad at the top of each bar (slightly detuned pair)
+    if (s % 16 === 0) {
+      padChords[bar].forEach(n => {
+        tone({ type: 'sawtooth', freq: midi(n), time: when, dur: STEP * 15, vol: 0.03, attack: 0.4, dest: musicGain });
+        tone({ type: 'triangle', freq: midi(n) * 1.004, time: when, dur: STEP * 15, vol: 0.035, attack: 0.4, dest: musicGain });
+      });
+    }
+    // dreamy lead with a soft echo
+    if (lead[s]) {
+      tone({ type: 'square', freq: midi(lead[s]), time: when, dur: STEP * 3.2, vol: 0.12, attack: 0.02, dest: musicGain });
+      tone({ type: 'square', freq: midi(lead[s]), time: when + STEP * 3, dur: STEP * 2.2, vol: 0.045, attack: 0.02, dest: musicGain });
+    }
+    if (s % 4 === 0) tone({ type: 'sine', freq: 100, time: when, dur: 0.13, vol: 0.42, slide: -60, dest: musicGain }); // 4-on-floor kick
+    if (s % 8 === 4) noise({ time: when, dur: 0.16, vol: 0.16, freq: 1700, q: 0.7, dest: musicGain });                 // snare 2 & 4
+    if (s % 4 === 2) noise({ time: when, dur: 0.04, vol: 0.08, freq: 8000, dest: musicGain });                          // offbeat hat
   }
 
   function startTheme() {

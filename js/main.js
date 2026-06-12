@@ -5,21 +5,22 @@
 /* ---------------- pack catalogue ---------------- */
 const PACKS = {
   standard: {
-    id: 'standard', name: 'ARCANA PACK', cost: 25, cards: 3,
-    colors: ['#ff9d76', '#fe5f55', '#c33d35', '#7e201b'],
+    id: 'standard', name: 'NEON PACK', cost: 25, cards: 3,
+    colors: ['#9ff0f2', '#2de2e6', '#15929e', '#0a3b4a'],
     odds: { common: 62, uncommon: 25, rare: 10, epic: 2.5, legendary: 0.5 },
   },
   jumbo: {
-    id: 'jumbo', name: 'JUMBO PACK', cost: 60, cards: 5,
-    colors: ['#9ad8ff', '#4f9dde', '#2c6da3', '#173d5e'],
+    id: 'jumbo', name: 'VAPOR PACK', cost: 60, cards: 5,
+    colors: ['#ff9ec2', '#ff3864', '#b3164a', '#54122e'],
     odds: { common: 50, uncommon: 28, rare: 15, epic: 5.5, legendary: 1.5 },
   },
   mega: {
-    id: 'mega', name: 'MEGA HOLO PACK', cost: 120, cards: 5,
-    colors: ['#ffe9a8', '#f5b83d', '#b8821e', '#6e4a0c'],
+    id: 'mega', name: 'CHROME PACK', cost: 120, cards: 5,
+    colors: ['#fff3c4', '#f9c80e', '#c98a06', '#6e4a0c'],
     odds: { common: 30, uncommon: 30, rare: 24, epic: 12, legendary: 4 },
   },
 };
+const PACK_LIST = Object.values(PACKS);
 
 const FREE_PACK_COOLDOWN = 180_000;        // 3 minutes
 const PITY_RARE = 5;                       // guaranteed rare+ every N packs
@@ -224,45 +225,61 @@ function addTilt(el, max = 14) {
   });
 }
 
-function buildShop() {
-  const shelf = $('packShelf');
-  shelf.innerHTML = '';
-  for (const pack of Object.values(PACKS)) {
-    const item = document.createElement('div');
-    item.className = 'shelf-item';
-    const holo = document.createElement('div');
-    holo.className = 'pack-holo';
-    holo.style.setProperty('--packglow', pack.colors[1] + '88');
-    const art = drawPackArt(pack);
-    holo.appendChild(art);
-    addTilt(holo);
-    const name = document.createElement('div');
-    name.className = 'shelf-name';
-    name.textContent = `${pack.name} · ${pack.cards} CARDS`;
-    const buy = document.createElement('button');
-    buy.className = 'big-btn buy-btn';
-    buy.textContent = `BUY ${pack.cost}`;
-    const tryBuy = () => {
-      AudioEngine.resume();
-      if (state.coins < pack.cost) {
-        AudioEngine.sfx.deny();
-        buy.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
-                     { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 200 });
-        return;
-      }
-      setCoins(state.coins - pack.cost);
-      AudioEngine.sfx.buy();
-      startOpening(pack);
-    };
-    buy.addEventListener('click', tryBuy);
-    holo.addEventListener('click', tryBuy);
-    item.append(holo, name, buy);
-    shelf.appendChild(item);
-  }
+let shopIndex = 0;
+
+function buildShop(slideDir = 0) {
+  const pack = PACK_LIST[shopIndex];
+  const stage = $('packStage');
+  stage.innerHTML = '';
+  const holo = document.createElement('div');
+  holo.className = 'pack-holo' + (slideDir < 0 ? ' slide-l' : slideDir > 0 ? ' slide-r' : '');
+  holo.style.setProperty('--packglow', pack.colors[1] + '99');
+  holo.appendChild(drawPackArt(pack));
+  addTilt(holo);
+  holo.addEventListener('click', tryBuyCurrent);
+  stage.appendChild(holo);
+
+  $('carouselDots').innerHTML = PACK_LIST.map((_, i) =>
+    `<div class="dot${i === shopIndex ? ' active' : ''}"></div>`).join('');
+
+  const oddsLine = RARITY_ORDER.slice(2).map(r =>
+    `<span style="color:${RARITIES[r].color}">${RARITIES[r].label} ${pack.odds[r]}%</span>`).join(' · ');
+  $('packInfo').innerHTML =
+    `<div class="p-name">${pack.name}</div>` +
+    `<div class="p-meta">${pack.cards} CARDS PER PACK</div>` +
+    `<div class="p-odds">${oddsLine}</div>`;
+  $('buyBtn').innerHTML = `BUY — ${pack.cost} <span class="coin-icon"></span>`;
+
   $('pityHint').innerHTML =
     `PITY: RARE+ GUARANTEED EVERY ${PITY_RARE} PACKS &middot; LEGENDARY EVERY ${PITY_LEGENDARY}<br>` +
     `PACKS OPENED: ${state.opened}`;
 }
+
+function tryBuyCurrent() {
+  const pack = PACK_LIST[shopIndex];
+  AudioEngine.resume();
+  if (state.coins < pack.cost) {
+    AudioEngine.sfx.deny();
+    $('buyBtn').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
+                         { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 200 });
+    return;
+  }
+  setCoins(state.coins - pack.cost);
+  AudioEngine.sfx.buy();
+  startOpening(pack);
+}
+
+$('buyBtn').addEventListener('click', tryBuyCurrent);
+$('prevPack').addEventListener('click', () => {
+  shopIndex = (shopIndex + PACK_LIST.length - 1) % PACK_LIST.length;
+  AudioEngine.sfx.flip();
+  buildShop(-1);
+});
+$('nextPack').addEventListener('click', () => {
+  shopIndex = (shopIndex + 1) % PACK_LIST.length;
+  AudioEngine.sfx.flip();
+  buildShop(1);
+});
 
 /* ---------------- free pack timer ---------------- */
 function updateFreePack() {

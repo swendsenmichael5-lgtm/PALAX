@@ -10,12 +10,19 @@
 </head>
 <body>
 
+<!-- synthwave backdrop layers -->
+<div id="bgStars"></div>
+<div id="gridFloor"></div>
+
 <!-- particle / FX layer -->
 <canvas id="fxCanvas"></canvas>
 
+<!-- CRT scanlines on top of everything -->
+<div id="scanlines"></div>
+
 <div id="app">
 
-  <!-- top bar -->
+  <!-- top HUD -->
   <header id="topbar">
     <div class="logo">PALA<span>X</span></div>
     <div class="coins-pill" id="coinsPill">
@@ -24,13 +31,27 @@
     <button id="muteBtn" class="icon-btn" title="Toggle sound">&#9835;</button>
   </header>
 
-  <!-- ============ SHOP SCREEN ============ -->
+  <!-- top tab bar -->
+  <nav id="navbar">
+    <button class="nav-btn active" data-screen="shop"><span class="nav-ico">&#9646;</span>SHOP</button>
+    <button class="nav-btn" data-screen="game"><span class="nav-ico">&#9830;</span>GAMBLE</button>
+    <button class="nav-btn" data-screen="collection"><span class="nav-ico">&#9733;</span>CARDS</button>
+    <button class="nav-btn" data-screen="trade"><span class="nav-ico">&#8644;</span>TRADE</button>
+  </nav>
+
+  <!-- ============ SHOP SCREEN: featured pack carousel ============ -->
   <section id="screen-shop" class="screen active">
-    <h2 class="screen-title">PACK SHOP</h2>
     <div class="free-pack-bar" id="freePackBar">
       <button id="freePackBtn" class="big-btn free-btn" disabled>FREE PACK IN <span id="freePackTimer">3:00</span></button>
     </div>
-    <div id="packShelf" class="pack-shelf"><!-- packs injected --></div>
+    <div class="carousel">
+      <button id="prevPack" class="arrow-btn">&#9664;</button>
+      <div id="packStage" class="pack-stage"></div>
+      <button id="nextPack" class="arrow-btn">&#9654;</button>
+    </div>
+    <div class="carousel-dots" id="carouselDots"></div>
+    <div id="packInfo" class="pack-info"></div>
+    <button id="buyBtn" class="big-btn buy-main">BUY</button>
     <div class="pity-hint" id="pityHint"></div>
   </section>
 
@@ -76,13 +97,6 @@
     <div id="tradeGrid" class="collection-grid"></div>
   </section>
 
-  <!-- bottom nav -->
-  <nav id="navbar">
-    <button class="nav-btn active" data-screen="shop"><span class="nav-ico">&#9646;</span>SHOP</button>
-    <button class="nav-btn" data-screen="game"><span class="nav-ico">&#9830;</span>GAMBLE</button>
-    <button class="nav-btn" data-screen="collection"><span class="nav-ico">&#9733;</span>CARDS</button>
-    <button class="nav-btn" data-screen="trade"><span class="nav-ico">&#8644;</span>TRADE</button>
-  </nav>
 </div>
 
 <!-- ============ PACK OPENING OVERLAY ============ -->

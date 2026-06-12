@@ -40,26 +40,51 @@ function cardFromSeed(seed, rarity) {
   return { seed, rarity, name };
 }
 
-/* Draw a card's pixel art onto a canvas (logical 48x48 art panel). */
+/* Draw a card's pixel art onto a canvas (logical 48x48 art panel).
+   Each card is a tiny synthwave scene: night sky, rarity-colored
+   sun on the horizon, perspective grid, creature in silhouette-glow. */
 function drawCardArt(canvas, card) {
-  const S = 48;
+  const S = 48, HORIZON = 30;
   canvas.width = S;
   canvas.height = S;
   const ctx = canvas.getContext('2d');
   const pal = RARITIES[card.rarity].palette;
   const rnd = mulberry32(card.seed ^ 0x9E3779B9);
 
-  // backdrop: dithered gradient in rarity tones
+  // night sky gradient
   for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const t = y / S + (rnd() - 0.5) * 0.25;
-      ctx.fillStyle = t < 0.45 ? pal[3] : (t < 0.8 ? '#1b2026' : '#11151b');
-      ctx.fillRect(x, y, 1, 1);
+    ctx.fillStyle = y < 10 ? '#07050f' : (y < 20 ? '#0d0a1f' : (y < HORIZON ? pal[3] : '#0a0714'));
+    ctx.fillRect(0, y, S, 1);
+  }
+  // stars
+  for (let i = 0; i < 16; i++) {
+    ctx.fillStyle = rnd() < 0.6 ? '#ffffff' : pal[0];
+    ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * (HORIZON - 4)), 1, 1);
+  }
+  // striped sun rising behind the horizon
+  const cx = 24, r = 10;
+  for (let dy = -r; dy <= 0; dy++) {
+    const y = HORIZON + dy;
+    if ((dy > -5) && (dy % 2 === 0)) continue;   // synth-sun gap stripes
+    const half = Math.floor(Math.sqrt(r * r - dy * dy));
+    ctx.fillStyle = dy < -6 ? pal[0] : pal[1];
+    ctx.fillRect(cx - half, y, half * 2, 1);
+  }
+  // glowing horizon line
+  ctx.fillStyle = pal[0];
+  ctx.fillRect(0, HORIZON, S, 1);
+  // perspective grid floor
+  ctx.fillStyle = pal[2];
+  [33, 37, 42].forEach(y => ctx.fillRect(0, y, S, 1));
+  for (let i = -2; i <= 2; i++) {
+    for (let y = HORIZON + 1; y < S; y++) {
+      const x = 24 + i * (y - HORIZON);
+      if (x >= 0 && x < S) ctx.fillRect(x, y, 1, 1);
     }
   }
   // sparkle field for epic+
   if (card.rarity === 'epic' || card.rarity === 'legendary') {
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 18; i++) {
       ctx.fillStyle = rnd() < 0.5 ? pal[0] : '#ffffff';
       ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 1, 1);
     }
@@ -69,6 +94,9 @@ function drawCardArt(canvas, card) {
   const G = 14, scale = 2;
   const off = Math.floor((S - G * scale) / 2);
   const srnd = mulberry32(card.seed);
+  // dark halo behind the creature so it pops off the scene
+  ctx.fillStyle = 'rgba(5,3,12,0.75)';
+  ctx.fillRect(off - 2, off - 2, G * scale + 4, G * scale + 4);
   for (let y = 0; y < G; y++) {
     for (let x = 0; x < Math.ceil(G / 2); x++) {
       if (srnd() < 0.46) {
@@ -84,10 +112,13 @@ function drawCardArt(canvas, card) {
   ctx.fillRect(ex, ey, 2, 2);
   ctx.fillRect(S - ex - 2, ey, 2, 2);
 
-  // frame
-  ctx.fillStyle = pal[2];
-  ctx.fillRect(0, 0, S, 1); ctx.fillRect(0, S - 1, S, 1);
-  ctx.fillRect(0, 0, 1, S); ctx.fillRect(S - 1, 0, 1, S);
+  // neon corner brackets instead of a full frame
+  ctx.fillStyle = pal[1];
+  const B = 6;
+  ctx.fillRect(0, 0, B, 1);         ctx.fillRect(S - B, 0, B, 1);
+  ctx.fillRect(0, S - 1, B, 1);     ctx.fillRect(S - B, S - 1, B, 1);
+  ctx.fillRect(0, 0, 1, B);         ctx.fillRect(S - 1, 0, 1, B);
+  ctx.fillRect(0, S - B, 1, B);     ctx.fillRect(S - 1, S - B, 1, B);
 }
 
 /* Build a DOM element for a card (used in reveal + collection). */
@@ -132,90 +163,98 @@ function makeTearLine(seedRnd) {
   return line;
 }
 
-/* full wrapper art on an offscreen canvas */
+/* Full wrapper art on an offscreen canvas.
+   New design: matte-black cyber foil with a neon frame, a glowing
+   emblem window, circuit traces, chevrons and a glyph label strip. */
 function drawPackArt(pack) {
   const c = document.createElement('canvas');
   c.width = PACK_W; c.height = PACK_H;
   const ctx = c.getContext('2d');
   const [c0, c1, c2, c3] = pack.colors;
 
-  // body with vertical foil shading bands
-  for (let x = 0; x < PACK_W; x++) {
-    const t = x / PACK_W;
-    ctx.fillStyle = t < 0.14 ? c0 : (t < 0.55 ? c1 : (t < 0.85 ? c2 : c3));
-    ctx.fillRect(x, 0, 1, PACK_H);
-  }
-  // bright sheen stripes
-  ctx.fillStyle = c0;
-  for (let x = 0; x < PACK_W; x++) {
-    if (x % 13 < 2) ctx.fillRect(x, 0, 1, PACK_H);
-  }
-  // diamond foil texture
-  ctx.globalAlpha = 0.22;
-  ctx.fillStyle = c0;
-  for (let y = 0; y < PACK_H; y += 4) {
-    for (let x = (y % 8 === 0 ? 0 : 2); x < PACK_W; x += 4) ctx.fillRect(x, y, 1, 1);
-  }
-  ctx.globalAlpha = 1;
-  // diagonal zigzag band with shadow
-  for (let x = 0; x < PACK_W; x++) {
-    const y = 34 + Math.floor(5 * Math.abs(((x / 6) % 2) - 1));
-    ctx.fillStyle = c3; ctx.fillRect(x, y + 7, 1, 2);
-    ctx.fillStyle = c2; ctx.fillRect(x, y, 1, 7);
-    ctx.fillStyle = c0; ctx.fillRect(x, y, 1, 1);
-  }
-  // crimp tops and bottoms
-  ctx.fillStyle = c3;
+  // matte dark body
+  ctx.fillStyle = '#15101f';
+  ctx.fillRect(0, 0, PACK_W, PACK_H);
+  // subtle vertical shading
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(3, 0, 8, PACK_H);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(PACK_W - 10, 0, 10, PACK_H);
+
+  // crimp zigzag top + bottom
   for (let x = 0; x < PACK_W; x += 2) {
-    ctx.fillRect(x, 0, 1, 4);
-    ctx.fillRect(x + 1, PACK_H - 4, 1, 4);
+    ctx.fillStyle = c3; ctx.fillRect(x, 0, 1, 4);
+    ctx.fillStyle = '#0a0714'; ctx.fillRect(x + 1, 0, 1, 4);
+    ctx.fillStyle = c3; ctx.fillRect(x + 1, PACK_H - 4, 1, 4);
+    ctx.fillStyle = '#0a0714'; ctx.fillRect(x, PACK_H - 4, 1, 4);
   }
+  ctx.fillStyle = c1;
   ctx.fillRect(0, 4, PACK_W, 1);
   ctx.fillRect(0, PACK_H - 5, PACK_W, 1);
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.fillRect(0, 5, PACK_W, 1);
 
-  // label plate with bevel
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.fillRect(5, 17, PACK_W - 10, 15);
-  ctx.fillStyle = '#14181f';
-  ctx.fillRect(6, 18, PACK_W - 12, 12);
+  // neon frame inset
+  ctx.fillStyle = c1;
+  ctx.fillRect(2, 7, PACK_W - 4, 1);
+  ctx.fillRect(2, PACK_H - 8, PACK_W - 4, 1);
+  ctx.fillRect(2, 7, 1, PACK_H - 15);
+  ctx.fillRect(PACK_W - 3, 7, 1, PACK_H - 15);
+  // bright frame corners
   ctx.fillStyle = c0;
-  ctx.fillRect(6, 18, PACK_W - 12, 1);
-  ctx.fillStyle = c3;
-  ctx.fillRect(6, 29, PACK_W - 12, 1);
-  // tiny pixel "PALAX" mark (abstract glyph row)
-  ctx.fillStyle = '#f4f1e8';
-  for (let i = 0; i < 5; i++) ctx.fillRect(10 + i * 6, 21, 4, 6);
+  [[2, 7], [PACK_W - 4, 7], [2, PACK_H - 9], [PACK_W - 4, PACK_H - 9]].forEach(([x, y]) =>
+    ctx.fillRect(x, y, 2, 2));
+
+  // emblem window — glowing diamond core
+  ctx.fillStyle = '#0a0714';
+  ctx.fillRect(14, 12, 20, 20);
   ctx.fillStyle = c2;
-  for (let i = 0; i < 5; i++) ctx.fillRect(11 + i * 6, 23, 2, 2);
+  ctx.fillRect(14, 12, 20, 1); ctx.fillRect(14, 31, 20, 1);
+  ctx.fillRect(14, 12, 1, 20); ctx.fillRect(33, 12, 1, 20);
+  // diamond
+  for (let dy = -6; dy <= 6; dy++) {
+    const half = 6 - Math.abs(dy);
+    ctx.fillStyle = c1;
+    ctx.fillRect(24 - half, 22 + dy, half * 2 || 1, 1);
+  }
+  for (let dy = -3; dy <= 3; dy++) {
+    const half = 3 - Math.abs(dy);
+    ctx.fillStyle = c0;
+    ctx.fillRect(24 - half, 22 + dy, half * 2 || 1, 1);
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(23, 21, 2, 2);
 
-  // glowing star burst under label
-  ctx.fillStyle = c3;
-  ctx.fillRect(21, 47, 6, 6);
+  // circuit traces from the window to the frame
+  ctx.fillStyle = c2;
+  ctx.fillRect(4, 21, 10, 1); ctx.fillRect(34, 21, 10, 1);
+  ctx.fillRect(4, 25, 6, 1);  ctx.fillRect(38, 25, 6, 1);
   ctx.fillStyle = c0;
-  ctx.fillRect(22, 48, 4, 4);
-  ctx.fillRect(23, 45, 2, 10);
-  ctx.fillRect(19, 49, 10, 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(23, 48, 2, 2);
+  [[4, 21], [43, 21], [4, 25], [43, 25]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
 
-  // sparkle glints
-  ctx.fillStyle = '#ffffff';
-  [[9, 10], [39, 14], [14, 56], [36, 52], [42, 38]].forEach(([x, y]) => {
-    ctx.fillRect(x, y, 1, 1);
-    ctx.globalAlpha = 0.5;
-    ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1);
-    ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1);
-    ctx.globalAlpha = 1;
-  });
+  // chevron band
+  for (let x = 4; x < PACK_W - 4; x++) {
+    const y = 40 + Math.floor(3 * Math.abs(((x - 4) / 5) % 2 - 1));
+    ctx.fillStyle = c1; ctx.fillRect(x, y, 1, 2);
+    ctx.fillStyle = c3; ctx.fillRect(x, y + 2, 1, 1);
+  }
 
-  // edge shading + rim light
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(0, 0, 2, PACK_H);
-  ctx.fillRect(PACK_W - 2, 0, 2, PACK_H);
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.fillRect(2, 0, 1, PACK_H);
+  // glyph label strip
+  ctx.fillStyle = '#0a0714';
+  ctx.fillRect(7, 49, PACK_W - 14, 9);
+  ctx.fillStyle = c2;
+  ctx.fillRect(7, 49, PACK_W - 14, 1);
+  ctx.fillStyle = '#eef2ff';
+  for (let i = 0; i < 5; i++) ctx.fillRect(11 + i * 6, 51, 4, 5);
+  ctx.fillStyle = c1;
+  for (let i = 0; i < 5; i++) ctx.fillRect(12 + i * 6, 53, 2, 2);
+
+  // scanline texture over everything
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  for (let y = 0; y < PACK_H; y += 3) ctx.fillRect(0, y, PACK_W, 1);
+
+  // glints
+  ctx.fillStyle = '#ffffff';
+  [[8, 10], [40, 15], [11, 44], [37, 57]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+
   return c;
 }
 
