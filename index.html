@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PALAX — Pixel Pack Ripper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- particle / FX layer -->
+<canvas id="fxCanvas"></canvas>
+
+<div id="app">
+
+  <!-- top bar -->
+  <header id="topbar">
+    <div class="logo">PALA<span>X</span></div>
+    <div class="coins-pill" id="coinsPill">
+      <span class="coin-icon"></span><span id="coinCount">0</span>
+    </div>
+    <button id="muteBtn" class="icon-btn" title="Toggle sound">&#9835;</button>
+  </header>
+
+  <!-- ============ SHOP SCREEN ============ -->
+  <section id="screen-shop" class="screen active">
+    <h2 class="screen-title">PACK SHOP</h2>
+    <div class="free-pack-bar" id="freePackBar">
+      <button id="freePackBtn" class="big-btn free-btn" disabled>FREE PACK IN <span id="freePackTimer">3:00</span></button>
+    </div>
+    <div id="packShelf" class="pack-shelf"><!-- packs injected --></div>
+    <div class="pity-hint" id="pityHint"></div>
+  </section>
+
+  <!-- ============ MINIGAME SCREEN ============ -->
+  <section id="screen-game" class="screen">
+    <h2 class="screen-title">DOUBLE OR NOTHING</h2>
+    <p class="subtitle">Flip higher than the dealer. Win = pot doubles.<br>Push your luck... or lose it all.</p>
+    <div class="duel-table">
+      <div class="duel-card-slot"><div class="duel-label">DEALER</div><div id="dealerCard" class="duel-card back"></div></div>
+      <div class="duel-vs">VS</div>
+      <div class="duel-card-slot"><div class="duel-label">YOU</div><div id="playerCard" class="duel-card back"></div></div>
+    </div>
+    <div class="pot-display">POT: <span id="potAmount">0</span> <span class="coin-icon"></span> <span id="streakBadge" class="streak-badge"></span></div>
+    <div id="betControls" class="bet-controls">
+      <button class="bet-btn" data-bet="10">BET 10</button>
+      <button class="bet-btn" data-bet="25">BET 25</button>
+      <button class="bet-btn" data-bet="50">BET 50</button>
+    </div>
+    <div id="duelControls" class="bet-controls hidden">
+      <button id="flipAgainBtn" class="big-btn danger-btn">FLIP AGAIN</button>
+      <button id="cashOutBtn" class="big-btn gold-btn">CASH OUT</button>
+    </div>
+    <div id="duelMsg" class="duel-msg"></div>
+    <div class="best-streak">BEST STREAK: <span id="bestStreak">0</span></div>
+  </section>
+
+  <!-- ============ COLLECTION SCREEN ============ -->
+  <section id="screen-collection" class="screen">
+    <h2 class="screen-title">COLLECTION</h2>
+    <div class="collection-stats" id="collectionStats"></div>
+    <div id="collectionGrid" class="collection-grid"></div>
+  </section>
+
+  <!-- ============ TRADE SCREEN ============ -->
+  <section id="screen-trade" class="screen">
+    <h2 class="screen-title">TRADING POST</h2>
+    <p class="subtitle">Gift a card: pick one below to generate a code.<br>The card leaves your collection — send the code to a friend!</p>
+    <div class="trade-redeem">
+      <input id="redeemInput" type="text" placeholder="PASTE CODE HERE" autocomplete="off">
+      <button id="redeemBtn" class="big-btn">REDEEM</button>
+    </div>
+    <div id="tradeMsg" class="duel-msg"></div>
+    <div id="tradeGrid" class="collection-grid"></div>
+  </section>
+
+  <!-- bottom nav -->
+  <nav id="navbar">
+    <button class="nav-btn active" data-screen="shop"><span class="nav-ico">&#9646;</span>SHOP</button>
+    <button class="nav-btn" data-screen="game"><span class="nav-ico">&#9830;</span>GAMBLE</button>
+    <button class="nav-btn" data-screen="collection"><span class="nav-ico">&#9733;</span>CARDS</button>
+    <button class="nav-btn" data-screen="trade"><span class="nav-ico">&#8644;</span>TRADE</button>
+  </nav>
+</div>
+
+<!-- ============ PACK OPENING OVERLAY ============ -->
+<div id="openOverlay" class="overlay hidden">
+  <div class="open-stage" id="openStage">
+    <div class="rip-hint" id="ripHint">&#9756; SWIPE ACROSS THE TOP TO RIP &#9758;</div>
+    <div id="packWrap" class="pack-wrap">
+      <canvas id="packFlap" width="48" height="18"></canvas>
+      <canvas id="packBody" width="48" height="64"></canvas>
+    </div>
+    <div id="cardRow" class="card-row"></div>
+    <button id="doneBtn" class="big-btn gold-btn hidden">COLLECT</button>
+  </div>
+</div>
+
+<!-- ============ TRADE CODE MODAL ============ -->
+<div id="codeModal" class="overlay hidden">
+  <div class="modal-box">
+    <h3>GIFT CODE</h3>
+    <p class="subtitle">Card removed from your collection.<br>Send this code to a friend:</p>
+    <div id="codeText" class="code-text"></div>
+    <button id="copyCodeBtn" class="big-btn">COPY CODE</button>
+    <button id="closeCodeBtn" class="big-btn danger-btn">CLOSE</button>
+  </div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
